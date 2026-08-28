@@ -1,0 +1,41 @@
+{
+  "name": "quid",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "postinstall": "node scripts/patch-cuer.mjs",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@circle-fin/adapter-circle-wallets": "1.4.2",
+    "@circle-fin/adapter-viem-v2": "1.14.0",
+    "@circle-fin/developer-controlled-wallets": "7.3.0",
+    "@circle-fin/unified-balance-kit": "1.2.2",
+    "@rainbow-me/rainbowkit": "^2.2.11",
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.111.0",
+    "@tanstack/react-query": "5.66.0",
+    "@x402/core": "^2.22.0",
+    "@x402/evm": "^2.22.0",
+    "@x402/svm": "^2.22.0",
+    "lucide-react": "^0.468.0",
+    "next": "^14.2.35",
+    "pino-pretty": "^13.1.3",
+    "qrcode": "^1.5.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "viem": "^2.55.16",
+    "wagmi": "^2.19.5"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.0.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0"
+  },
+  "optionalDependencies": {
+    "@next/swc-win32-x64-msvc": "^14.2.33"
+  }
+}
