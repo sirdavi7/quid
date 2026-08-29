@@ -7,10 +7,10 @@ import { ThemeToggle } from '@/components/theme-toggle'
 
 export function AppHeader({ children, includeSite = false }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-arc/10 bg-paper/88 backdrop-blur-xl">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-5">
+    <header className="sticky top-0 z-40 border-b border-arc/10 bg-paper/92 shadow-[0_14px_40px_rgba(109,53,242,0.06)] backdrop-blur-xl">
+      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-5">
         <Link href="/" aria-label="Quid home" className="inline-flex shrink-0 items-center">
-          <QuidLogo full priority />
+          <QuidLogo full size="header" priority />
         </Link>
 
         <div className="flex min-w-0 items-center justify-end gap-2">
