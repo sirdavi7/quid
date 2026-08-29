@@ -9,7 +9,18 @@ const links = [
   { href: '#faq', label: 'FAQ', icon: CircleHelp }
 ]
 
-export function SiteNavMenu() {
+export function SiteNavMenu({ compact = false }) {
+  if (compact) {
+    return links.map((link) => {
+      const Icon = link.icon
+      return (
+        <a key={link.href} href={link.href} className={navButtonClass}>
+          <Icon size={14} /> {link.label}
+        </a>
+      )
+    })
+  }
+
   return (
     <details className="group relative">
       <summary className={`${navButtonClass} cursor-pointer list-none`}>

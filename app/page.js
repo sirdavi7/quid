@@ -3,7 +3,6 @@ import { ArrowRight, BadgeCheck, BadgeDollarSign, CircleHelp, Link2, ReceiptText
 import Image from 'next/image'
 import { AppHeader } from '@/components/app-header'
 import { HomeShowcase } from '@/components/home-showcase'
-import { QuidLogo } from '@/components/quid-logo'
 import { ScrollReveal } from '@/components/scroll-reveal'
 import { CreateNavButton, DashboardNavButton, FaucetNavButton, HomeNavButton, LoginNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -248,30 +247,8 @@ export default async function Home() {
           </div>
         </ScrollReveal>
       </section>
-
-      <footer className="mx-auto grid max-w-6xl gap-8 border-t border-arc/10 px-5 py-10 md:grid-cols-[1.1fr_0.9fr_0.9fr]">
-        <div>
-          <QuidLogo full />
-          <p className="mt-4 max-w-sm leading-7 text-ink/60">
-            Personal USDC payment pages powered by Circle infrastructure and shaped for creators who need simple money movement.
-          </p>
-        </div>
-        <div>
-          <h3 className="font-black text-ink">Product</h3>
-          <div className="mt-4 grid gap-3 text-sm font-bold text-ink/60">
-            <a href="#product">Product</a>
-            <a href="#why-quid">Why Quid</a>
-            <a href="#faq">FAQ</a>
-          </div>
-        </div>
-        <div>
-          <h3 className="font-black text-ink">Resources</h3>
-          <div className="mt-4 grid gap-3 text-sm font-bold text-ink/60">
-            <a href="https://faucet.circle.com/" target="_blank" rel="noreferrer">Circle testnet faucet</a>
-            <span className="text-ink/35">X / Twitter coming soon</span>
-          </div>
-        </div>
-      </footer>
     </main>
   )
 }
+
+
