@@ -9,7 +9,7 @@ export function AppFooter() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <QuidLogo full />
           <p className="font-semibold">
-            © 2026 Quid USDC Pay. Powered by Circle Wallets, Gateway, and Arc.
+            Â© 2026 Quid USDC Pay. Powered by Circle Wallets, Gateway, and Arc.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 font-bold text-arc">
