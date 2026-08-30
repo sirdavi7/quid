@@ -1,4 +1,5 @@
 import { AppHeader } from '@/components/app-header'
+import { AppFooter } from '@/components/app-footer'
 import { CreateNavButton, FaucetNavButton, HomeNavButton } from '@/components/nav-buttons'
 import { Suspense } from 'react'
 import { LoginForm } from '@/components/login-form'
@@ -30,6 +31,7 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
       </section>
+      <AppFooter />
     </main>
   )
 }

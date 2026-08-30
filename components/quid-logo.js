@@ -2,7 +2,7 @@ import Image from 'next/image'
 
 const fullSizes = {
   default: { width: 180, height: 54 },
-  header: { width: 132, height: 40 },
+  header: { width: 168, height: 50 },
   footer: { width: 148, height: 44 }
 }
 

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowRight, BadgeCheck, BadgeDollarSign, CircleHelp, Link2, ReceiptText, Send, ShieldCheck, Sparkles, WalletCards } from 'lucide-react'
 import Image from 'next/image'
 import { AppHeader } from '@/components/app-header'
+import { AppFooter } from '@/components/app-footer'
 import { HomeShowcase } from '@/components/home-showcase'
 import { ScrollReveal } from '@/components/scroll-reveal'
 import { CreateNavButton, DashboardNavButton, FaucetNavButton, HomeNavButton, LoginNavButton, SignOutNavButton } from '@/components/nav-buttons'
@@ -247,6 +248,7 @@ export default async function Home() {
           </div>
         </ScrollReveal>
       </section>
+      <AppFooter />
     </main>
   )
 }

@@ -1,6 +1,5 @@
 import './globals.css'
 import { Providers } from '@/components/providers'
-import { AppFooter } from '@/components/app-footer'
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 const metadataBase = new URL(appUrl.startsWith('http') ? appUrl : `https://${appUrl}`)
@@ -47,10 +46,7 @@ export default function RootLayout({ children }) {
             `
           }}
         />
-        <Providers>
-          {children}
-          <AppFooter />
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

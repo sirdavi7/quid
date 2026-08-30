@@ -218,6 +218,11 @@ export function LoginForm() {
       return
     }
 
+    if (!googleAuthEnabled) {
+      setError('Google sign-in is not enabled yet. Use email and password for now.')
+      return
+    }
+
     setPendingAction('google')
 
     try {
@@ -238,6 +243,7 @@ export function LoginForm() {
 
   const isSubmitting = Boolean(pendingAction)
   const isCreating = mode === 'create-account'
+  const googleAuthEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === 'true'
 
   return (
     <form onSubmit={handlePasswordSubmit} className="rounded-lg border border-ink/10 bg-white p-5 shadow-panel">
@@ -258,17 +264,19 @@ export function LoginForm() {
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={handleGoogleSignIn}
-        disabled={isSubmitting}
-        className="quid-secondary-action mt-5 h-12 w-full px-4 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {pendingAction === 'google' ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={18} />}
-        Continue with Google
-      </button>
+      {googleAuthEnabled ? (
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={isSubmitting}
+          className="quid-secondary-action mt-5 h-12 w-full px-4 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {pendingAction === 'google' ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={18} />}
+          Continue with Google
+        </button>
+      ) : null}
 
-      <div className="my-5 flex items-center gap-3 text-xs font-bold uppercase text-ink/35">
+      <div className={`${googleAuthEnabled ? 'my-5' : 'mb-5 mt-1'} flex items-center gap-3 text-xs font-bold uppercase text-ink/35`}>
         <span className="h-px flex-1 bg-ink/10" />
         or use email
         <span className="h-px flex-1 bg-ink/10" />

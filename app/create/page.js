@@ -1,4 +1,5 @@
 import { AppHeader } from '@/components/app-header'
+import { AppFooter } from '@/components/app-footer'
 import { redirect } from 'next/navigation'
 import { CreatePageForm } from '@/components/create-page-form'
 import { DashboardNavButton, FaucetNavButton, HomeNavButton } from '@/components/nav-buttons'
@@ -50,6 +51,7 @@ export default async function CreatePage() {
         </div>
         <CreatePageForm />
       </section>
+      <AppFooter />
     </main>
   )
 }
