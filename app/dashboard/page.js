@@ -77,16 +77,8 @@ function paymentChainLabel(payment) {
   return `${source} to ${destination}`
 }
 
-function paymentExplorerStatus(payment) {
-  if (paymentExplorerUrl(payment)) {
-    return 'Explorer'
-  }
-
-  if (payment.txHash) {
-    return 'Explorer indexing'
-  }
-
-  return 'Receipt finalizing'
+function paymentExplorerStatus() {
+  return 'Explorer'
 }
 
 function paymentExplorerUrl(payment) {
@@ -308,7 +300,7 @@ export default async function DashboardPage() {
                           </a>
                         ) : (
                           <span className="rounded-md border border-arc/15 bg-haze/70 px-2 py-1 text-xs font-bold text-ink/45">
-                            {paymentExplorerStatus(payment)}
+                            {paymentExplorerStatus()}
                           </span>
                         )}
                       </div>

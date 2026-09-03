@@ -1,4 +1,5 @@
 import './globals.css'
+import { AppFooterStrip } from '@/components/app-footer-strip'
 import { Providers } from '@/components/providers'
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -46,7 +47,10 @@ export default function RootLayout({ children }) {
             `
           }}
         />
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <AppFooterStrip />
+        </Providers>
       </body>
     </html>
   )
