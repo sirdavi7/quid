@@ -49,7 +49,7 @@ export async function POST(request) {
       destinationChain: 'Arc Testnet',
       txHash,
       explorerUrl,
-      status: 'submitted',
+      status: explorerUrl ? 'confirmed' : 'submitted',
       kind: 'outgoing',
       note: 'Direct withdrawal'
     })

@@ -7,8 +7,9 @@ import { DashboardChainWallets } from '@/components/dashboard-chain-wallets'
 import { DashboardReceivedBalance } from '@/components/dashboard-received-balance'
 import { DashboardWalletActivity } from '@/components/dashboard-wallet-activity'
 import { FaucetNavButton, HomeNavButton, OpenPaymentPageNavButton, CreateNavButton, SignOutNavButton } from '@/components/nav-buttons'
-import { getPaymentSummaryForOwner, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage } from '@/lib/store'
+import { getPaymentSummaryForOwner, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, updatePaymentExplorerForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getCircleTransactionDetails } from '@/lib/circleWallets'
 
 export const metadata = {
   title: 'Dashboard'
@@ -77,10 +78,6 @@ function paymentChainLabel(payment) {
   return `${source} to ${destination}`
 }
 
-function paymentExplorerStatus() {
-  return 'Explorer'
-}
-
 function paymentExplorerUrl(payment) {
   if (payment.explorerUrl) {
     return payment.explorerUrl
@@ -91,6 +88,60 @@ function paymentExplorerUrl(payment) {
   }
 
   return null
+}
+
+function paymentStatusFromCircleState(state, fallback) {
+  const normalized = String(state ?? '').toUpperCase()
+
+  if (['COMPLETE', 'CONFIRMED'].includes(normalized)) {
+    return 'confirmed'
+  }
+
+  if (['FAILED', 'DENIED', 'CANCELLED'].includes(normalized)) {
+    return 'failed'
+  }
+
+  return fallback ?? 'submitted'
+}
+
+async function hydratePaymentExplorerLinks(ownerId, payments) {
+  const unresolved = payments
+    .filter((payment) => (
+      payment.kind === 'outgoing' &&
+      payment.txHash &&
+      !paymentExplorerUrl(payment) &&
+      !String(payment.txHash).startsWith('0x')
+    ))
+    .slice(0, 5)
+
+  if (!unresolved.length) {
+    return payments
+  }
+
+  const updates = await Promise.allSettled(
+    unresolved.map(async (payment) => {
+      const resolved = await getCircleTransactionDetails(payment.txHash)
+
+      if (!resolved.txHash || !String(resolved.txHash).startsWith('0x')) {
+        return null
+      }
+
+      const explorerUrl = resolved.explorerUrl ?? `https://testnet.arcscan.app/tx/${resolved.txHash}`
+      return updatePaymentExplorerForOwner(ownerId, payment.id, {
+        txHash: resolved.txHash,
+        explorerUrl,
+        status: paymentStatusFromCircleState(resolved.state, payment.status)
+      })
+    })
+  )
+
+  const byId = new Map(
+    updates
+      .filter((result) => result.status === 'fulfilled' && result.value)
+      .map((result) => [result.value.id, result.value])
+  )
+
+  return payments.map((payment) => byId.get(payment.id) ?? payment)
 }
 
 export default async function DashboardPage() {
@@ -109,7 +160,8 @@ export default async function DashboardPage() {
   }
 
   const pages = await listPagesForOwner(user.id)
-  const payments = await listPaymentsForOwner(user.id, 20)
+  const storedPayments = await listPaymentsForOwner(user.id, 20)
+  const payments = await hydratePaymentExplorerLinks(user.id, storedPayments)
   const summary = await getPaymentSummaryForOwner(user.id)
   const primaryPage = pages[0]
   const pageWallets = primaryPage ? await listWalletsForPage(primaryPage.id) : []
@@ -298,11 +350,7 @@ export default async function DashboardPage() {
                           <a href={paymentExplorerUrl(payment)} target="_blank" rel="noreferrer" className="quid-secondary-action h-8 gap-1 px-2 text-xs">
                             Explorer <ExternalLink size={13} />
                           </a>
-                        ) : (
-                          <span className="rounded-md border border-arc/15 bg-haze/70 px-2 py-1 text-xs font-bold text-ink/45">
-                            {paymentExplorerStatus()}
-                          </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </article>
