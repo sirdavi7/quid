@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Save } from 'lucide-react'
+import Link from 'next/link'
+import { ExternalLink, Loader2, Save } from 'lucide-react'
 
 export function EditPageForm({ page }) {
   const router = useRouter()
@@ -11,6 +12,7 @@ export function EditPageForm({ page }) {
     headline: page.headline,
     note: page.note ?? ''
   })
+  const [savedPage, setSavedPage] = useState(page)
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -31,12 +33,14 @@ export function EditPageForm({ page }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
       })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
 
       if (!response.ok) {
         throw new Error(payload.error ?? 'Could not update this page.')
       }
 
+      const updatedPage = payload.page ?? { ...savedPage, ...form }
+      setSavedPage(updatedPage)
       setStatus('Payment page updated.')
       router.refresh()
     } catch (submitError) {
@@ -81,9 +85,19 @@ export function EditPageForm({ page }) {
         </label>
 
         <div className="rounded-md border border-arc/20 bg-haze p-3">
-          <p className="text-xs font-bold uppercase text-arc">Public link</p>
-          <p className="mt-1 font-mono text-sm text-ink">/pay/{page.username}</p>
-          <p className="mt-2 text-xs leading-5 text-ink/55">Username editing is locked for now so shared links do not break.</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase text-arc">Saved public page</p>
+              <p className="mt-2 text-lg font-black text-ink">{savedPage.name}</p>
+              <p className="mt-1 text-sm font-semibold text-ink/60">{savedPage.headline}</p>
+              {savedPage.note ? <p className="mt-2 text-xs leading-5 text-ink/55">{savedPage.note}</p> : null}
+              <p className="mt-3 font-mono text-sm text-ink">/pay/{savedPage.username}</p>
+            </div>
+            <Link href={`/pay/${savedPage.username}`} className="quid-secondary-action h-9 px-3 text-xs">
+              Open <ExternalLink size={13} />
+            </Link>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-ink/55">Username editing is locked for now so shared links do not break.</p>
         </div>
       </div>
 
