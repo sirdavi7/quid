@@ -20,6 +20,20 @@ function formatBalance(value) {
   })} USDC`
 }
 
+function friendlyBalanceError(message) {
+  const text = String(message ?? '').toLowerCase()
+
+  if (text.includes('json') || text.includes('doctype') || text.includes('unexpected token')) {
+    return 'Balance response unavailable.'
+  }
+
+  if (text.includes('fetch failed') || text.includes('network')) {
+    return 'Balance service unavailable.'
+  }
+
+  return 'Balance unavailable.'
+}
+
 function primaryArcWalletFromPage(page) {
   if (!page?.walletAddress) {
     return null
@@ -54,7 +68,7 @@ export function DashboardChainWallets({ initialWallets = [], page = null, wallet
 
     try {
       const response = await fetch('/api/page-wallets', { method: 'POST' })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
 
       if (!response.ok) {
         throw new Error(payload.error ?? 'Unable to set up chain wallets.')
@@ -94,7 +108,7 @@ export function DashboardChainWallets({ initialWallets = [], page = null, wallet
               chainId: wallet.chainId
             })
           })
-          const payload = await response.json()
+          const payload = await response.json().catch(() => ({}))
 
           if (!response.ok) {
             throw new Error(payload.error ?? 'Balance unavailable.')
@@ -102,7 +116,7 @@ export function DashboardChainWallets({ initialWallets = [], page = null, wallet
 
           return [wallet.chainId, { balance: payload.balance }]
         } catch (requestError) {
-          return [wallet.chainId, { error: requestError.message }]
+          return [wallet.chainId, { error: friendlyBalanceError(requestError.message) }]
         }
       })
     )
@@ -162,47 +176,49 @@ export function DashboardChainWallets({ initialWallets = [], page = null, wallet
         </button>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {chainOptions.map((chain) => {
-          const wallet = walletByChain.get(chain.id)
-          const balance = balances[chain.id]
+      <div className="mt-5 max-h-[34rem] overflow-y-auto pr-1 sm:max-h-[36rem]">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {chainOptions.map((chain) => {
+            const wallet = walletByChain.get(chain.id)
+            const balance = balances[chain.id]
 
-          return (
-            <article key={chain.id} className="rounded-md border border-arc/15 bg-haze p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-black text-ink">{chain.label}</p>
-                  <p className="mt-1 font-mono text-xs text-ink/55">{shortAddress(wallet?.walletAddress)}</p>
-                  {wallet?.walletAddress ? (
-                    <p className="mt-2 text-sm font-black text-ink">
-                      {balanceStatus === 'loading' && !balance
-                        ? 'Checking...'
-                        : balance?.error
-                          ? 'Balance unavailable'
-                          : formatBalance(balance?.balance)}
-                    </p>
-                  ) : null}
+            return (
+              <article key={chain.id} className="rounded-md border border-arc/15 bg-haze p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-black text-ink">{chain.label}</p>
+                    <p className="mt-1 font-mono text-xs text-ink/55">{shortAddress(wallet?.walletAddress)}</p>
+                    {wallet?.walletAddress ? (
+                      <p className="mt-2 text-sm font-black text-ink">
+                        {balanceStatus === 'loading' && !balance
+                          ? 'Checking...'
+                          : balance?.error
+                          ? balance.error
+                            : formatBalance(balance?.balance)}
+                      </p>
+                    ) : null}
+                  </div>
+                  {wallet ? <CheckCircle2 size={18} className="text-mint" /> : <WalletCards size={18} className="text-ink/35" />}
                 </div>
-                {wallet ? <CheckCircle2 size={18} className="text-mint" /> : <WalletCards size={18} className="text-ink/35" />}
-              </div>
-              {wallet?.walletAddress ? (
-                <button
-                  type="button"
-                  onClick={() => copyAddress(wallet.walletAddress, chain.id)}
-                  className="quid-secondary-action mt-3 h-8 px-2 text-xs"
-                >
-                  <Copy size={13} /> {copied === String(chain.id) ? 'Copied' : 'Copy'}
-                </button>
-              ) : status === 'loading' ? (
-                <p className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-arc">
-                  <Loader2 size={13} className="animate-spin" /> Setting up
-                </p>
-              ) : (
-                <p className="mt-3 text-xs font-semibold text-coral">Setup pending</p>
-              )}
-            </article>
-          )
-        })}
+                {wallet?.walletAddress ? (
+                  <button
+                    type="button"
+                    onClick={() => copyAddress(wallet.walletAddress, chain.id)}
+                    className="quid-secondary-action mt-3 h-8 px-2 text-xs"
+                  >
+                    <Copy size={13} /> {copied === String(chain.id) ? 'Copied' : 'Copy'}
+                  </button>
+                ) : status === 'loading' ? (
+                  <p className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-arc">
+                    <Loader2 size={13} className="animate-spin" /> Setting up
+                  </p>
+                ) : (
+                  <p className="mt-3 text-xs font-semibold text-coral">Setup pending</p>
+                )}
+              </article>
+            )
+          })}
+        </div>
       </div>
 
       {walletMocked ? <p className="mt-4 text-sm font-semibold text-coral">Live chain wallets need Circle env vars.</p> : null}

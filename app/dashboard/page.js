@@ -59,7 +59,11 @@ function paymentSourceLabel(payment) {
     return payment.note || 'Direct withdrawal'
   }
 
-  return payment.sourceChain
+  if (payment.note && !payment.note.toLowerCase().startsWith('paid ')) {
+    return payment.note
+  }
+
+  return 'Received USDC'
 }
 
 function paymentChainLabel(payment) {
@@ -71,6 +75,30 @@ function paymentChainLabel(payment) {
   }
 
   return `${source} to ${destination}`
+}
+
+function paymentExplorerStatus(payment) {
+  if (paymentExplorerUrl(payment)) {
+    return 'Explorer'
+  }
+
+  if (payment.txHash) {
+    return 'Explorer indexing'
+  }
+
+  return 'Receipt finalizing'
+}
+
+function paymentExplorerUrl(payment) {
+  if (payment.explorerUrl) {
+    return payment.explorerUrl
+  }
+
+  if (String(payment.txHash ?? '').startsWith('0x') && paymentChainLabel(payment).toLowerCase().includes('arc testnet')) {
+    return `https://testnet.arcscan.app/tx/${payment.txHash}`
+  }
+
+  return null
 }
 
 export default async function DashboardPage() {
@@ -93,7 +121,7 @@ export default async function DashboardPage() {
   const summary = await getPaymentSummaryForOwner(user.id)
   const primaryPage = pages[0]
   const pageWallets = primaryPage ? await listWalletsForPage(primaryPage.id) : []
-  const walletActivities = await listWalletActivityForOwner(user.id, 8)
+  const walletActivities = await listWalletActivityForOwner(user.id, 30)
   const outgoingPayments = payments.filter((payment) => payment.kind === 'outgoing' && payment.status !== 'failed')
   const outgoingTotal = outgoingPayments.reduce((total, payment) => total + Number(payment.amount), 0)
 
@@ -106,7 +134,7 @@ export default async function DashboardPage() {
         <FaucetNavButton />
       </AppHeader>
 
-      <section className="mx-auto max-w-6xl px-5 py-10">
+      <section className="mx-auto max-w-6xl px-5 pb-10 pt-12 sm:pt-14">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm font-bold uppercase text-arc">Dashboard</p>
@@ -257,11 +285,11 @@ export default async function DashboardPage() {
             </div>
 
             {payments.length ? (
-              <div className="mt-5 divide-y divide-ink/10">
+              <div className="mt-5 max-h-[30rem] divide-y divide-ink/10 overflow-y-auto pr-1">
                 {payments.map((payment) => (
                   <article key={payment.id} className="py-4 first:pt-0 last:pb-0">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
+                    <div className="min-w-0">
+                      <div className="min-w-0">
                         <p className="font-black text-ink">{paymentDirection(payment)}{formatUsdc(payment.amount)}</p>
                         <p className="mt-1 text-sm text-ink/55">
                           {paymentDescription(payment)}
@@ -270,13 +298,19 @@ export default async function DashboardPage() {
                           {formatDate(payment.createdAt)} - {paymentChainLabel(payment)} - {paymentSourceLabel(payment)}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-md bg-mint/20 px-2 py-1 text-xs font-bold uppercase text-ink">{payment.status}</span>
-                        {payment.explorerUrl ? (
-                          <a href={payment.explorerUrl} target="_blank" rel="noreferrer" className="quid-secondary-action h-8 gap-1 px-2 text-xs">
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="rounded-md bg-mint/20 px-2 py-1 text-xs font-bold uppercase text-ink">
+                          {payment.status}
+                        </span>
+                        {paymentExplorerUrl(payment) ? (
+                          <a href={paymentExplorerUrl(payment)} target="_blank" rel="noreferrer" className="quid-secondary-action h-8 gap-1 px-2 text-xs">
                             Explorer <ExternalLink size={13} />
                           </a>
-                        ) : null}
+                        ) : (
+                          <span className="rounded-md border border-arc/15 bg-haze/70 px-2 py-1 text-xs font-bold text-ink/45">
+                            {paymentExplorerStatus(payment)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </article>
@@ -305,4 +339,3 @@ export default async function DashboardPage() {
     </main>
   )
 }
-

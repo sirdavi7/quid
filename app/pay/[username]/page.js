@@ -62,13 +62,13 @@ export default async function PayPage({ params }) {
     <main className="min-h-screen bg-paper">
       <AppHeader>
         <HomeNavButton />
-        {isOwner ? <DashboardNavButton /> : <CreateNavButton label="Create yours" />}
+        {user ? <DashboardNavButton /> : <CreateNavButton label="Create yours" />}
         {user ? <SignOutNavButton /> : null}
         <FaucetNavButton />
       </AppHeader>
 
       {isOwner ? (
-        <section className="mx-auto max-w-6xl px-5 pt-4">
+        <section className="mx-auto max-w-6xl px-5 pt-8 sm:pt-10">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-arc/20 bg-haze px-4 py-3 text-sm text-ink shadow-panel">
             <div className="flex items-center gap-2 font-semibold">
               <Eye size={16} className="text-arc" />
@@ -81,7 +81,7 @@ export default async function PayPage({ params }) {
         </section>
       ) : null}
 
-      <section className="mx-auto grid max-w-6xl gap-6 px-5 py-8 xl:grid-cols-[0.9fr_1.1fr]">
+      <section className="mx-auto grid max-w-6xl gap-6 px-5 pb-8 pt-8 xl:grid-cols-[0.9fr_1.1fr]">
         <aside className="order-2 rounded-lg border border-ink/10 bg-white p-5 shadow-panel xl:order-1">
           <div className="flex items-center gap-3">
             <div className="grid h-14 w-14 place-items-center rounded-md bg-arc text-2xl font-black text-white">

@@ -2,7 +2,7 @@
 
 import { createViemAdapterFromProvider } from '@circle-fin/adapter-viem-v2'
 import { UnifiedBalanceKit } from '@circle-fin/unified-balance-kit'
-import { AlertCircle, Loader2, Send } from 'lucide-react'
+import { AlertCircle, ExternalLink, Loader2, Send } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useMemo, useState } from 'react'
 import { formatUnits, isAddress, parseUnits } from 'viem'
@@ -41,7 +41,7 @@ export function PayActions({ page, isOwner = false }) {
     recipient: '',
     amount: '1.00'
   })
-  const [status, setStatus] = useState('')
+  const [success, setSuccess] = useState(null)
   const [error, setError] = useState('')
   const [pendingAction, setPendingAction] = useState('')
   const isBusy = Boolean(pendingAction)
@@ -107,6 +107,11 @@ export function PayActions({ page, isOwner = false }) {
     return message ?? 'Payment failed.'
   }
 
+  function shortAddress(value) {
+    if (!value) return 'recipient'
+    return `${value.slice(0, 6)}...${value.slice(-4)}`
+  }
+
   async function recordSubmittedPayment({ selected, result }) {
     const response = await fetch('/api/payments', {
       method: 'POST',
@@ -154,7 +159,7 @@ export function PayActions({ page, isOwner = false }) {
 
   async function payWithUnifiedBalance(event) {
     event.preventDefault()
-    setStatus('')
+    setSuccess(null)
     setError('')
     setPendingAction('pay')
 
@@ -211,7 +216,12 @@ export function PayActions({ page, isOwner = false }) {
       }
 
       await recordSubmittedPayment({ selected, result })
-      setStatus(result?.explorerUrl ? `Payment submitted: ${result.explorerUrl}` : 'Payment submitted and saved to the creator dashboard.')
+      setSuccess({
+        title: 'Payment submitted',
+        detail: `USDC payment to /pay/${page.username} was sent and saved to the creator dashboard.`,
+        url: result?.explorerUrl,
+        linkLabel: selected.id === ARC_TESTNET_ID ? 'View on ArcScan' : 'View transaction'
+      })
     } catch (payError) {
       setError(getFriendlyError(payError.message))
     } finally {
@@ -221,7 +231,7 @@ export function PayActions({ page, isOwner = false }) {
 
   async function sendArcUsdc(event) {
     event.preventDefault()
-    setStatus('')
+    setSuccess(null)
     setError('')
     setPendingAction('send')
 
@@ -251,7 +261,12 @@ export function PayActions({ page, isOwner = false }) {
       })
 
       await recordOutgoingConnectedWalletSend({ hash })
-      setStatus(`Arc transfer submitted: https://testnet.arcscan.app/tx/${hash}`)
+      setSuccess({
+        title: 'Arc transfer submitted',
+        detail: `USDC was sent to ${shortAddress(sendForm.recipient)} and recorded in Quid money movement.`,
+        url: `https://testnet.arcscan.app/tx/${hash}`,
+        linkLabel: 'View on ArcScan'
+      })
     } catch (sendError) {
       setError(getFriendlyError(sendError.message))
     } finally {
@@ -375,8 +390,16 @@ export function PayActions({ page, isOwner = false }) {
         </form>
       ) : null}
 
-      {status ? (
-        <p className="rounded-md bg-mint/20 px-3 py-2 text-sm font-semibold text-ink">{status}</p>
+      {success ? (
+        <div className="rounded-md border border-mint/30 bg-mint/20 px-3 py-3 text-sm text-ink">
+          <p className="font-black">{success.title}</p>
+          <p className="mt-1 break-words font-semibold text-ink/65">{success.detail}</p>
+          {success.url ? (
+            <a href={success.url} target="_blank" rel="noreferrer" className="quid-secondary-action mt-3 h-9 w-fit gap-1 px-3 text-xs">
+              {success.linkLabel} <ExternalLink size={13} />
+            </a>
+          ) : null}
+        </div>
       ) : null}
       {error ? (
         <p className="flex gap-2 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">

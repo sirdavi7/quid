@@ -14,6 +14,20 @@ function formatBalance(value) {
   })} USDC`
 }
 
+function friendlyBalanceError(message) {
+  const text = String(message ?? '').toLowerCase()
+
+  if (text.includes('json') || text.includes('doctype') || text.includes('unexpected token')) {
+    return 'Quid could not read the balance response. Try refreshing in a moment.'
+  }
+
+  if (text.includes('fetch failed') || text.includes('network')) {
+    return 'Quid could not reach the balance service. Try refreshing in a moment.'
+  }
+
+  return 'Unable to read received wallet balance right now.'
+}
+
 export function DashboardReceivedBalance({ walletAddress, walletMocked = false }) {
   const [balance, setBalance] = useState(null)
   const [status, setStatus] = useState(walletAddress ? 'idle' : 'missing')
@@ -34,7 +48,7 @@ export function DashboardReceivedBalance({ walletAddress, walletMocked = false }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ walletAddress })
       })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
 
       if (!response.ok) {
         throw new Error(payload.error ?? 'Received wallet balance request failed.')
@@ -43,7 +57,7 @@ export function DashboardReceivedBalance({ walletAddress, walletMocked = false }
       setBalance(payload.balance)
       setStatus('ready')
     } catch (err) {
-      setError(err.message ?? 'Unable to read received wallet balance.')
+      setError(friendlyBalanceError(err.message))
       setStatus('error')
     }
   }

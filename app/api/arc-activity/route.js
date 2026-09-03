@@ -277,7 +277,7 @@ export async function POST() {
             chain: option.label,
             txHash: `balance-sync-${page.id}-${option.id}-${receivedWalletBalance.toString()}`,
             explorerUrl: getExplorerUrl(option, 'address', wallet.walletAddress),
-            source: 'Balance sync',
+            source: 'Received USDC',
             blockNumber: null,
             happenedAt: new Date().toISOString()
           })
@@ -289,7 +289,7 @@ export async function POST() {
 
     await upsertWalletActivityRecords(balanceSyncRecords)
 
-    const activities = await listWalletActivityForOwner(user.id, 8)
+    const activities = await listWalletActivityForOwner(user.id, 30)
 
     return NextResponse.json({
       activities,

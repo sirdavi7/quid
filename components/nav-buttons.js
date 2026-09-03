@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { Droplets, ExternalLink, Home, LayoutDashboard, LogIn, LogOut, Plus } from 'lucide-react'
+import { Droplets, ExternalLink, Home, LayoutDashboard, LogIn, Plus } from 'lucide-react'
+import { SignOutConfirmButton } from '@/components/sign-out-confirm-button'
 
 export const navButtonClass =
   'quid-secondary-action text-xs'
@@ -53,11 +54,5 @@ export function LoginNavButton() {
 }
 
 export function SignOutNavButton() {
-  return (
-    <form action="/auth/sign-out" method="post" className="contents">
-      <button className={`${navButtonClass} w-full sm:w-auto`}>
-        <LogOut size={14} /> Sign out
-      </button>
-    </form>
-  )
+  return <SignOutConfirmButton className={`${navButtonClass} w-full sm:w-auto`} />
 }

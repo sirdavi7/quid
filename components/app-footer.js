@@ -3,7 +3,7 @@ import { ExternalLink } from 'lucide-react'
 
 import { QuidLogo } from '@/components/quid-logo'
 
-export function AppFooter() {
+export function AppFooter({ paymentPageHref = '/dashboard' }) {
   return (
     <footer className="border-t border-arc/10 bg-paper">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-5">
@@ -29,7 +29,7 @@ export function AppFooter() {
             <h3 className="text-sm font-black uppercase text-ink/70">App</h3>
             <div className="mt-4 grid gap-3 text-sm font-bold text-ink/55">
               <Link href="/dashboard" className="transition hover:text-arc">Dashboard</Link>
-              <Link href="/dashboard" className="transition hover:text-arc">Open payment page</Link>
+              <Link href={paymentPageHref} className="transition hover:text-arc">Open payment page</Link>
             </div>
           </div>
 
@@ -54,7 +54,7 @@ export function AppFooter() {
         </div>
 
         <div className="mt-10 flex flex-col gap-3 border-t border-arc/10 pt-5 text-xs font-semibold text-ink/45 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 Quid USDC Pay. Built on Circle and Arc.</p>
+          <p>Â© 2026 Quid USDC Pay. Built on Circle and Arc.</p>
           <p>Pay links, received balances, and withdrawals in one workspace.</p>
         </div>
       </div>

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { AlertCircle, Database, Loader2, RefreshCw, Send, WalletCards } from 'lucide-react'
@@ -18,6 +18,19 @@ function formatBalance(value) {
   })
 }
 
+function friendlyPanelError(message) {
+  const text = String(message || '').toLowerCase()
+
+  if (text.includes('json') || text.includes('doctype') || text.includes('unexpected token')) {
+    return 'Quid received an unreadable service response. Try again in a moment.'
+  }
+
+  if (text.includes('fetch failed') || text.includes('network')) {
+    return 'Quid could not reach the wallet service. Try again in a moment.'
+  }
+
+  return message || 'Wallet action failed.'
+}
 function GatewayBalanceSummary({ result }) {
   if (!result) {
     return null
@@ -104,7 +117,7 @@ export function CreatorWalletPanel({ page }) {
       const response = await fetch('/api/page-wallets', {
         method: 'POST'
       })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
 
       if (!response.ok) {
         throw new Error(payload.error ?? 'Wallet setup failed.')
@@ -113,7 +126,7 @@ export function CreatorWalletPanel({ page }) {
       setWallets(payload.wallets ?? [])
       setSendResult(payload.created ? `Created ${payload.created} supported-chain wallet${payload.created === 1 ? '' : 's'} for this Quid page.` : 'Supported-chain wallets are already set up.')
     } catch (requestError) {
-      setError(requestError.message)
+      setError(friendlyPanelError(requestError.message))
     } finally {
       setPendingAction('')
     }
@@ -137,7 +150,7 @@ export function CreatorWalletPanel({ page }) {
           chainId: selectedSource.id
         })
       })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
 
       if (!response.ok) {
         throw new Error(payload.error ?? 'Arc balance request failed.')
@@ -145,7 +158,7 @@ export function CreatorWalletPanel({ page }) {
 
       setReceivedBalance(payload)
     } catch (requestError) {
-      setError(requestError.message)
+      setError(friendlyPanelError(requestError.message))
     } finally {
       setPendingAction('')
     }
@@ -176,7 +189,7 @@ export function CreatorWalletPanel({ page }) {
           sourceChainId: selectedSource.id
         })
       })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
 
       if (!response.ok) {
         throw new Error(payload.error ?? 'Circle request failed.')
@@ -190,7 +203,7 @@ export function CreatorWalletPanel({ page }) {
         setSendResult(payload.result?.explorerUrl ? `Gateway withdrawal submitted: ${payload.result.explorerUrl}` : `Gateway withdrawal submitted from ${selectedSource.label} to Arc Testnet.`)
       }
     } catch (requestError) {
-      setError(requestError.message)
+      setError(friendlyPanelError(requestError.message))
     } finally {
       setPendingAction('')
     }
@@ -214,7 +227,7 @@ export function CreatorWalletPanel({ page }) {
           amount
         })
       })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
 
       if (!response.ok) {
         throw new Error(payload.error ?? 'Withdrawal request failed.')
@@ -222,7 +235,7 @@ export function CreatorWalletPanel({ page }) {
 
       setSendResult(payload.result?.id ? `Withdrawal submitted. Circle transaction ID: ${payload.result.id}` : 'Withdrawal submitted from your received USDC wallet.')
     } catch (requestError) {
-      setError(requestError.message)
+      setError(friendlyPanelError(requestError.message))
     } finally {
       setPendingAction('')
     }
@@ -343,7 +356,7 @@ export function CreatorWalletPanel({ page }) {
         <GatewayBalanceSummary result={gatewayBalance} />
 
         {sendResult ? (
-          <p className="mt-4 rounded-md border border-arc/20 bg-haze px-3 py-2 text-sm font-semibold text-ink">
+          <p className="mt-4 break-words rounded-md border border-arc/20 bg-haze px-3 py-2 text-sm font-semibold text-ink">
             {sendResult}
           </p>
         ) : null}

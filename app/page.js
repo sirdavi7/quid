@@ -7,6 +7,7 @@ import { HomeShowcase } from '@/components/home-showcase'
 import { ScrollReveal } from '@/components/scroll-reveal'
 import { CreateNavButton, DashboardNavButton, FaucetNavButton, HomeNavButton, LoginNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getPageForOwner } from '@/lib/store'
 
 export default async function Home() {
   let user = null
@@ -18,6 +19,9 @@ export default async function Home() {
   } catch {
     user = null
   }
+
+  const primaryPage = user ? await getPageForOwner(user.id) : null
+  const paymentPageHref = user ? (primaryPage?.username ? `/pay/${primaryPage.username}` : '/create') : '/dashboard'
 
   const productCards = [
     {
@@ -83,7 +87,7 @@ export default async function Home() {
         <FaucetNavButton />
       </AppHeader>
 
-      <section className="mx-auto grid max-w-6xl gap-8 px-4 pb-14 pt-6 sm:px-5 lg:grid-cols-[minmax(0,0.82fr)_minmax(360px,0.9fr)] lg:items-center">
+      <section className="mx-auto grid max-w-6xl gap-8 px-4 pb-14 pt-10 sm:px-5 sm:pt-12 lg:grid-cols-[minmax(0,0.82fr)_minmax(360px,0.9fr)] lg:items-center">
         <div>
           <p className="mb-5 inline-flex rounded-md border border-arc/20 bg-haze px-3 py-1 text-sm font-bold text-arc">
             Arc Testnet, Circle Wallets, Gateway
@@ -248,7 +252,7 @@ export default async function Home() {
           </div>
         </ScrollReveal>
       </section>
-      <AppFooter />
+      <AppFooter paymentPageHref={paymentPageHref} />
     </main>
   )
 }
