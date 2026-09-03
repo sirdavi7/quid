@@ -48,7 +48,9 @@ export function AppFooter({ paymentPageHref = '/dashboard' }) {
               <a href="https://developers.circle.com/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 transition hover:text-arc">
                 Circle docs <ExternalLink size={13} />
               </a>
-              <span className="text-ink/35">X / Twitter coming soon</span>
+              <a href="https://x.com/usequid" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 transition hover:text-arc">
+                X / Twitter <ExternalLink size={13} />
+              </a>
             </div>
           </div>
         </div>

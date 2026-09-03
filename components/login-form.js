@@ -6,7 +6,15 @@ import { Eye, EyeOff, KeyRound, Loader2, LogIn, Mail, UserPlus } from 'lucide-re
 import { getFriendlyAuthError } from '@/lib/auth-errors'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
-export function LoginForm() {
+function getSafeNextPath(value) {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/login')) {
+    return '/dashboard'
+  }
+
+  return value
+}
+
+export function LoginForm({ nextPath = '/dashboard' }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [mode, setMode] = useState('sign-in')
@@ -19,9 +27,8 @@ export function LoginForm() {
   const [showMagicLink, setShowMagicLink] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const next = useMemo(() => {
-    const value = searchParams.get('next') || '/dashboard'
-    return value.startsWith('/') ? value : '/dashboard'
-  }, [searchParams])
+    return getSafeNextPath(searchParams.get('next') || nextPath)
+  }, [nextPath, searchParams])
 
   useEffect(() => {
     let isMounted = true

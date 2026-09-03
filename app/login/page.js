@@ -3,12 +3,32 @@ import { AppFooter } from '@/components/app-footer'
 import { CreateNavButton, FaucetNavButton, HomeNavButton } from '@/components/nav-buttons'
 import { Suspense } from 'react'
 import { LoginForm } from '@/components/login-form'
+import { redirect } from 'next/navigation'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export const metadata = {
   title: 'Login'
 }
 
-export default function LoginPage() {
+function getSafeNextPath(value) {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/login')) {
+    return '/dashboard'
+  }
+
+  return value
+}
+
+export default async function LoginPage({ searchParams }) {
+  const next = getSafeNextPath(searchParams?.next)
+  const supabase = createSupabaseServerClient()
+  const {
+    data: { user }
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    redirect(next)
+  }
+
   return (
     <main className="min-h-screen bg-paper">
       <AppHeader>
@@ -28,7 +48,7 @@ export default function LoginPage() {
           </p>
         </div>
         <Suspense fallback={null}>
-          <LoginForm />
+          <LoginForm nextPath={next} />
         </Suspense>
       </section>
       <AppFooter />

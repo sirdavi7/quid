@@ -30,7 +30,7 @@ export function CreatePageForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
       })
-      const payload = await response.json()
+      const payload = await response.json().catch(() => ({}))
 
       if (!response.ok) {
         throw new Error(payload.error ?? 'Could not create this page.')

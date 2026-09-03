@@ -6,6 +6,8 @@ import { SiteNavMenu } from '@/components/site-nav-menu'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 export function AppHeader({ children, includeSite = false }) {
+  const hasMenuContent = includeSite || Boolean(children)
+
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 border-b border-arc/10 bg-paper/86 shadow-[0_14px_42px_rgba(109,53,242,0.08)] backdrop-blur-xl supports-[backdrop-filter]:bg-paper/74">
@@ -22,15 +24,17 @@ export function AppHeader({ children, includeSite = false }) {
 
           <div className="flex min-w-0 items-center justify-end gap-2 md:hidden">
             <ThemeToggle />
-            <details className="group relative">
-              <summary className={`${navButtonClass} h-10 cursor-pointer list-none px-3 text-xs`}>
-                <Menu size={14} /> Menu
-              </summary>
-              <div className="absolute right-0 z-50 mt-2 grid w-[min(17rem,calc(100vw-2rem))] gap-2 rounded-md border border-arc/20 bg-paper p-2 shadow-glow">
-                {includeSite ? <SiteNavMenu compact /> : null}
-                {children}
-              </div>
-            </details>
+            {hasMenuContent ? (
+              <details className="group relative">
+                <summary className={`${navButtonClass} h-10 cursor-pointer list-none px-3 text-xs`}>
+                  <Menu size={14} /> Menu
+                </summary>
+                <div className="absolute right-0 z-50 mt-2 grid w-[min(17rem,calc(100vw-2rem))] gap-2 rounded-md border border-arc/20 bg-paper p-2 shadow-glow">
+                  {includeSite ? <SiteNavMenu compact /> : null}
+                  {children}
+                </div>
+              </details>
+            ) : null}
           </div>
         </nav>
       </header>

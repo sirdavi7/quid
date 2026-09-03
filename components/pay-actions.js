@@ -10,6 +10,7 @@ import {
   useAccount,
   useBalance,
   useChainId,
+  usePublicClient,
   useReadContract,
   useSwitchChain,
   useWriteContract
@@ -31,6 +32,7 @@ export function PayActions({ page, isOwner = false }) {
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
   const { writeContractAsync } = useWriteContract()
+  const arcPublicClient = usePublicClient({ chainId: ARC_TESTNET_ID })
   const kit = useMemo(() => new UnifiedBalanceKit(), [])
 
   const [payForm, setPayForm] = useState({
@@ -157,6 +159,20 @@ export function PayActions({ page, isOwner = false }) {
     }
   }
 
+  async function waitForArcTransferReceipt(hash) {
+    if (!arcPublicClient) {
+      throw new Error('Arc RPC is still getting ready. Try the payment again in a moment.')
+    }
+
+    const receipt = await arcPublicClient.waitForTransactionReceipt({ hash })
+
+    if (receipt.status !== 'success') {
+      throw new Error('Arc transaction failed before confirmation.')
+    }
+
+    return receipt
+  }
+
   async function payWithUnifiedBalance(event) {
     event.preventDefault()
     setSuccess(null)
@@ -195,6 +211,7 @@ export function PayActions({ page, isOwner = false }) {
           args: [page.walletAddress, parseUnits(payForm.amount, 6)],
           chainId: ARC_TESTNET_ID
         })
+        await waitForArcTransferReceipt(hash)
         result = {
           hash,
           explorerUrl: `https://testnet.arcscan.app/tx/${hash}`
@@ -216,9 +233,10 @@ export function PayActions({ page, isOwner = false }) {
       }
 
       await recordSubmittedPayment({ selected, result })
+      const didWaitForArcReceipt = selected.id === ARC_TESTNET_ID
       setSuccess({
-        title: 'Payment submitted',
-        detail: `USDC payment to /pay/${page.username} was sent and saved to the creator dashboard.`,
+        title: didWaitForArcReceipt ? 'Payment confirmed' : 'Payment submitted',
+        detail: `USDC payment to /pay/${page.username} was ${didWaitForArcReceipt ? 'confirmed' : 'sent'} and saved to the creator dashboard.`,
         url: result?.explorerUrl,
         linkLabel: selected.id === ARC_TESTNET_ID ? 'View on ArcScan' : 'View transaction'
       })
@@ -260,10 +278,11 @@ export function PayActions({ page, isOwner = false }) {
         chainId: ARC_TESTNET_ID
       })
 
+      await waitForArcTransferReceipt(hash)
       await recordOutgoingConnectedWalletSend({ hash })
       setSuccess({
-        title: 'Arc transfer submitted',
-        detail: `USDC was sent to ${shortAddress(sendForm.recipient)} and recorded in Quid money movement.`,
+        title: 'Arc transfer confirmed',
+        detail: `USDC was confirmed to ${shortAddress(sendForm.recipient)} and recorded in Quid money movement.`,
         url: `https://testnet.arcscan.app/tx/${hash}`,
         linkLabel: 'View on ArcScan'
       })
