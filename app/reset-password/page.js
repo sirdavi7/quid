@@ -1,12 +1,25 @@
 import { AppHeader } from '@/components/app-header'
 import { ResetPasswordForm } from '@/components/reset-password-form'
 import { FaucetNavButton, HomeNavButton, LoginNavButton } from '@/components/nav-buttons'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export const metadata = {
   title: 'Reset Password'
 }
 
-export default function ResetPasswordPage() {
+export default async function ResetPasswordPage() {
+  let hasSession = false
+
+  try {
+    const supabase = createSupabaseServerClient()
+    const {
+      data: { user }
+    } = await supabase.auth.getUser()
+    hasSession = Boolean(user)
+  } catch {
+    hasSession = false
+  }
+
   return (
     <main className="min-h-screen bg-paper">
       <AppHeader>
@@ -25,7 +38,7 @@ export default function ResetPasswordPage() {
             Use the password reset link from your email, then choose a new password for your Quid workspace.
           </p>
         </div>
-        <ResetPasswordForm />
+        <ResetPasswordForm initialHasSession={hasSession} />
       </section>
     </main>
   )

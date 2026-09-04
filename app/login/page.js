@@ -5,17 +5,10 @@ import { Suspense } from 'react'
 import { LoginForm } from '@/components/login-form'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getSafeNextPath } from '@/lib/routes'
 
 export const metadata = {
   title: 'Login'
-}
-
-function getSafeNextPath(value) {
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/login')) {
-    return '/dashboard'
-  }
-
-  return value
 }
 
 export default async function LoginPage({ searchParams }) {

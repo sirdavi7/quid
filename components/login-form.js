@@ -5,14 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Eye, EyeOff, KeyRound, Loader2, LogIn, Mail, UserPlus } from 'lucide-react'
 import { getFriendlyAuthError } from '@/lib/auth-errors'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
-
-function getSafeNextPath(value) {
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/login')) {
-    return '/dashboard'
-  }
-
-  return value
-}
+import { getSafeNextPath } from '@/lib/routes'
 
 export function LoginForm({ nextPath = '/dashboard' }) {
   const router = useRouter()
@@ -285,7 +278,7 @@ export function LoginForm({ nextPath = '/dashboard' }) {
 
       <div className={`${googleAuthEnabled ? 'my-5' : 'mb-5 mt-1'} flex items-center gap-3 text-xs font-bold uppercase text-ink/35`}>
         <span className="h-px flex-1 bg-ink/10" />
-        or use email
+        use email
         <span className="h-px flex-1 bg-ink/10" />
       </div>
 

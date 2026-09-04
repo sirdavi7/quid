@@ -104,6 +104,15 @@ function paymentStatusFromCircleState(state, fallback) {
   return fallback ?? 'submitted'
 }
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Circle transaction lookup timed out.')), ms)
+    })
+  ])
+}
+
 async function hydratePaymentExplorerLinks(ownerId, payments) {
   const unresolved = payments
     .filter((payment) => (
@@ -120,7 +129,7 @@ async function hydratePaymentExplorerLinks(ownerId, payments) {
 
   const updates = await Promise.allSettled(
     unresolved.map(async (payment) => {
-      const resolved = await getCircleTransactionDetails(payment.txHash)
+      const resolved = await withTimeout(getCircleTransactionDetails(payment.txHash), 2500)
 
       if (!resolved.txHash || !String(resolved.txHash).startsWith('0x')) {
         return null

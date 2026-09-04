@@ -1,13 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-
-function getSafeNextPath(value) {
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/login')) {
-    return '/dashboard'
-  }
-
-  return value
-}
+import { getSafeNextPath } from '@/lib/routes'
 
 export async function GET(request) {
   const requestUrl = new URL(request.url)

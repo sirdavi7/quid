@@ -5,14 +5,14 @@ import { useEffect, useState } from 'react'
 import { Eye, EyeOff, KeyRound, Loader2 } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
-export function ResetPasswordForm() {
+export function ResetPasswordForm({ initialHasSession = false }) {
   const router = useRouter()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [hasSession, setHasSession] = useState(false)
+  const [hasSession, setHasSession] = useState(initialHasSession)
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
