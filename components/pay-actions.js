@@ -4,7 +4,8 @@ import { createViemAdapterFromProvider } from '@circle-fin/adapter-viem-v2'
 import { UnifiedBalanceKit } from '@circle-fin/unified-balance-kit'
 import { AlertCircle, ExternalLink, Loader2, Send } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { formatUnits, isAddress, parseUnits } from 'viem'
 import {
   useAccount,
@@ -27,7 +28,37 @@ const WalletConnectButton = dynamic(() => import('./wallet-connect-button'), {
   )
 })
 
+function getQueryAmount(value) {
+  if (!value) {
+    return null
+  }
+
+  const amount = Number(value)
+
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 100) {
+    return null
+  }
+
+  return value
+}
+
+function getQueryChainId(value) {
+  if (!value) {
+    return null
+  }
+
+  const normalized = String(value).trim().toLowerCase()
+  const selected = chainOptions.find((option) => {
+    const labelSlug = option.label.toLowerCase().replaceAll(' ', '-')
+
+    return String(option.id) === normalized || option.gatewayName.toLowerCase() === normalized || labelSlug === normalized
+  })
+
+  return selected ? String(selected.id) : null
+}
+
 export function PayActions({ page, isOwner = false }) {
+  const searchParams = useSearchParams()
   const { address, connector, isConnected } = useAccount()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
@@ -35,9 +66,13 @@ export function PayActions({ page, isOwner = false }) {
   const arcPublicClient = usePublicClient({ chainId: ARC_TESTNET_ID })
   const kit = useMemo(() => new UnifiedBalanceKit(), [])
 
+  const queryAmount = searchParams.get('amount')
+  const queryChain = searchParams.get('chain')
+  const initialAmount = getQueryAmount(queryAmount) ?? '5.00'
+  const initialSourceChainId = getQueryChainId(queryChain) ?? String(ARC_TESTNET_ID)
   const [payForm, setPayForm] = useState({
-    amount: '5.00',
-    sourceChainId: String(ARC_TESTNET_ID)
+    amount: initialAmount,
+    sourceChainId: initialSourceChainId
   })
   const [sendForm, setSendForm] = useState({
     recipient: '',
@@ -52,6 +87,22 @@ export function PayActions({ page, isOwner = false }) {
     [payForm.sourceChainId]
   )
   const isArcSource = selectedSource.id === ARC_TESTNET_ID
+
+  useEffect(() => {
+    const nextAmount = getQueryAmount(queryAmount)
+
+    if (nextAmount) {
+      setPayForm((current) => ({ ...current, amount: nextAmount }))
+    }
+  }, [queryAmount])
+
+  useEffect(() => {
+    const nextChainId = getQueryChainId(queryChain)
+
+    if (nextChainId) {
+      setPayForm((current) => ({ ...current, sourceChainId: nextChainId }))
+    }
+  }, [queryChain])
 
   const { data: sourceUsdcBalance } = useReadContract({
     address: selectedSource.usdcAddress,

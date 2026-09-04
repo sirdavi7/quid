@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AppHeader } from '@/components/app-header'
+import { AppFooterStrip } from '@/components/app-footer-strip'
 import { notFound } from 'next/navigation'
 import { Eye, Settings, WalletCards } from 'lucide-react'
 import { CreatorWalletPanel } from '@/components/creator-wallet-panel'
@@ -59,15 +60,16 @@ export default async function PayPage({ params }) {
   }
 
   return (
-    <main className="min-h-screen bg-paper">
-      <AppHeader>
-        <HomeNavButton />
-        {user ? <DashboardNavButton /> : <CreateNavButton label="Create yours" />}
-        {user ? <SignOutNavButton /> : null}
-        <FaucetNavButton />
-      </AppHeader>
+    <>
+      <main className="min-h-screen bg-paper">
+        <AppHeader>
+          <HomeNavButton />
+          {user ? <DashboardNavButton /> : <CreateNavButton label="Create yours" />}
+          {user ? <SignOutNavButton /> : null}
+          <FaucetNavButton />
+        </AppHeader>
 
-      {isOwner ? (
+        {isOwner ? (
         <section className="mx-auto max-w-6xl px-5 pt-8 sm:pt-10">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-arc/20 bg-haze px-4 py-3 text-sm text-ink shadow-panel">
             <div className="flex items-center gap-2 font-semibold">
@@ -128,7 +130,9 @@ export default async function PayPage({ params }) {
           <ReceiveCard page={publicPage} />
         </section>
       ) : null}
-      {isOwner ? <CreatorWalletPanel page={{ ...page, wallets: pageWallets }} /> : null}
-    </main>
+        {isOwner ? <CreatorWalletPanel page={{ ...page, wallets: pageWallets }} /> : null}
+      </main>
+      <AppFooterStrip />
+    </>
   )
 }

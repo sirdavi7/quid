@@ -1,4 +1,5 @@
 import { AppHeader } from '@/components/app-header'
+import { AppFooterStrip } from '@/components/app-footer-strip'
 import { ResetPasswordForm } from '@/components/reset-password-form'
 import { FaucetNavButton, HomeNavButton, LoginNavButton } from '@/components/nav-buttons'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -21,14 +22,15 @@ export default async function ResetPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen bg-paper">
-      <AppHeader>
-        <HomeNavButton />
-        <LoginNavButton />
-        <FaucetNavButton />
-      </AppHeader>
+    <>
+      <main className="min-h-screen bg-paper">
+        <AppHeader>
+          <HomeNavButton />
+          <LoginNavButton />
+          <FaucetNavButton />
+        </AppHeader>
 
-      <section className="mx-auto grid max-w-5xl gap-8 px-5 py-10 md:grid-cols-[0.9fr_1.1fr]">
+        <section className="mx-auto grid max-w-5xl gap-8 px-5 py-10 md:grid-cols-[0.9fr_1.1fr]">
         <div>
           <p className="text-sm font-bold uppercase text-arc">Reset password</p>
           <h1 className="mt-3 text-4xl font-black leading-tight text-ink md:text-5xl">
@@ -39,7 +41,9 @@ export default async function ResetPasswordPage() {
           </p>
         </div>
         <ResetPasswordForm initialHasSession={hasSession} />
-      </section>
-    </main>
+        </section>
+      </main>
+      <AppFooterStrip />
+    </>
   )
 }

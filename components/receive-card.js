@@ -12,16 +12,28 @@ function shortAddress(address) {
 export function ReceiveCard({ page }) {
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [copied, setCopied] = useState('')
+  const [qrAmount, setQrAmount] = useState('')
 
   const pageUrl = useMemo(() => {
     if (typeof window === 'undefined') return `/pay/${page.username}`
     return `${window.location.origin}/pay/${page.username}`
   }, [page.username])
+  const qrPaymentUrl = useMemo(() => {
+    const amount = Number(qrAmount)
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return pageUrl
+    }
+
+    const url = new URL(pageUrl, typeof window === 'undefined' ? 'http://localhost:3000' : window.location.origin)
+    url.searchParams.set('amount', qrAmount.trim())
+    return url.toString()
+  }, [pageUrl, qrAmount])
 
   useEffect(() => {
     let isMounted = true
 
-    QRCode.toDataURL(pageUrl, {
+    QRCode.toDataURL(qrPaymentUrl, {
       margin: 2,
       width: 220,
       color: {
@@ -39,7 +51,7 @@ export function ReceiveCard({ page }) {
     return () => {
       isMounted = false
     }
-  }, [pageUrl])
+  }, [qrPaymentUrl])
 
   async function copyValue(value, type) {
     await navigator.clipboard.writeText(value)
@@ -72,8 +84,19 @@ export function ReceiveCard({ page }) {
         <div className="grid content-start gap-3">
           <div className="rounded-md border border-ink/10 bg-paper p-4">
             <p className="text-xs font-black uppercase text-ink/45">Payment link</p>
-            <p className="mt-2 break-all font-mono text-sm font-bold text-ink">{pageUrl}</p>
+            <p className="mt-2 break-all font-mono text-sm font-bold text-ink">{qrPaymentUrl}</p>
           </div>
+
+          <label className="grid gap-2 rounded-md border border-ink/10 bg-paper p-4">
+            <span className="text-xs font-black uppercase text-ink/45">QR amount</span>
+            <input
+              value={qrAmount}
+              onChange={(event) => setQrAmount(event.target.value)}
+              className="h-10 rounded-md border border-ink/15 bg-white px-3 outline-none focus:border-arc"
+              inputMode="decimal"
+              placeholder="Optional"
+            />
+          </label>
 
           <div className="rounded-md border border-ink/10 bg-paper p-4">
             <div className="flex items-center gap-2 text-xs font-black uppercase text-ink/45">
@@ -86,7 +109,7 @@ export function ReceiveCard({ page }) {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => copyValue(pageUrl, 'link')}
+              onClick={() => copyValue(qrPaymentUrl, 'link')}
               className="inline-flex h-10 items-center gap-2 rounded-md border border-arc/20 bg-transparent px-3 text-sm font-bold text-arc shadow-panel transition hover:-translate-y-0.5 hover:scale-[1.02] hover:border-arc/40 hover:shadow-glow"
             >
               <Copy size={16} /> {copied === 'link' ? 'Copied link' : 'Copy link'}

@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { AppHeader } from '@/components/app-header'
 import { AppFooter } from '@/components/app-footer'
 import { HomeShowcase } from '@/components/home-showcase'
+import { ScanPayCard } from '@/components/scan-pay-card'
 import { ScrollReveal } from '@/components/scroll-reveal'
 import { CreateNavButton, DashboardNavButton, FaucetNavButton, HomeNavButton, LoginNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -133,6 +134,12 @@ export default async function Home() {
         <div className="w-full lg:pt-12">
           <HomeShowcase />
         </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-5 pb-16">
+        <ScrollReveal>
+          <ScanPayCard />
+        </ScrollReveal>
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-4 px-5 pt-8 pb-16 md:grid-cols-3 lg:pt-10">

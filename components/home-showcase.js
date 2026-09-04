@@ -9,7 +9,7 @@ const slides = [
     label: 'Create',
     title: 'Claim a pay link',
     body: 'Your Quid page carries your handle, wallet, payment note, and a clean checkout.',
-    stat: 'quid.link/sirdavid',
+    stat: 'use-quid.app/username',
     icon: Link2
   },
   {
@@ -23,7 +23,7 @@ const slides = [
     label: 'Withdraw',
     title: 'Move funds on Arc',
     body: 'Owner tools separate checkout records, direct deposits, balances, and payouts.',
-    stat: 'Arc withdrawal',
+    stat: 'USDC withdrawal',
     icon: Send
   }
 ]

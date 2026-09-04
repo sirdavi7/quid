@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { AppHeader } from '@/components/app-header'
+import { AppFooterStrip } from '@/components/app-footer-strip'
 import { EditPageForm } from '@/components/edit-page-form'
 import { DashboardNavButton, FaucetNavButton, HomeNavButton, OpenPaymentPageNavButton } from '@/components/nav-buttons'
 import { getPageForOwner } from '@/lib/store'
@@ -31,15 +32,16 @@ export default async function SettingsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-paper">
-      <AppHeader>
-        <HomeNavButton />
-        <OpenPaymentPageNavButton username={page.username} />
-        <DashboardNavButton />
-        <FaucetNavButton />
-      </AppHeader>
+    <>
+      <main className="min-h-screen bg-paper">
+        <AppHeader>
+          <HomeNavButton />
+          <OpenPaymentPageNavButton username={page.username} />
+          <DashboardNavButton />
+          <FaucetNavButton />
+        </AppHeader>
 
-      <section className="mx-auto grid max-w-6xl gap-6 px-5 py-10 lg:grid-cols-[0.75fr_1.25fr]">
+        <section className="mx-auto grid max-w-6xl gap-6 px-5 py-10 lg:grid-cols-[0.75fr_1.25fr]">
         <div>
           <p className="text-sm font-bold uppercase text-arc">Settings</p>
           <h1 className="mt-2 text-4xl font-black text-ink">Edit payment page</h1>
@@ -54,7 +56,9 @@ export default async function SettingsPage() {
         </div>
 
         <EditPageForm page={page} />
-      </section>
-    </main>
+        </section>
+      </main>
+      <AppFooterStrip />
+    </>
   )
 }

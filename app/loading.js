@@ -8,7 +8,7 @@ export default function Loading() {
         <div className="max-w-xl">
           <p className="text-sm font-bold uppercase text-arc">Quid</p>
           <h1 className="mt-2 text-4xl font-black text-ink">Loading workspace</h1>
-          <p className="mt-3 text-ink/60">Preparing your session and payment records.</p>
+          <p className="mt-3 text-ink/60">Preparing your session, please wait...</p>
         </div>
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((item) => (

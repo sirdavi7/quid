@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AppHeader } from '@/components/app-header'
+import { AppFooterStrip } from '@/components/app-footer-strip'
 import { redirect } from 'next/navigation'
 import { Activity, Clock3, Droplets, ExternalLink, Plus, ReceiptText, Settings, WalletCards } from 'lucide-react'
 import { CopyLinkButton } from '@/components/copy-link-button'
@@ -179,15 +180,16 @@ export default async function DashboardPage() {
   const outgoingTotal = outgoingPayments.reduce((total, payment) => total + Number(payment.amount), 0)
 
   return (
-    <main className="min-h-screen bg-paper">
-      <AppHeader>
-        <HomeNavButton />
-        {primaryPage ? <OpenPaymentPageNavButton username={primaryPage.username} /> : <CreateNavButton label="Create" />}
-        <SignOutNavButton />
-        <FaucetNavButton />
-      </AppHeader>
+    <>
+      <main className="min-h-screen bg-paper">
+        <AppHeader>
+          <HomeNavButton />
+          {primaryPage ? <OpenPaymentPageNavButton username={primaryPage.username} /> : <CreateNavButton label="Create" />}
+          <SignOutNavButton />
+          <FaucetNavButton />
+        </AppHeader>
 
-      <section className="mx-auto max-w-6xl px-5 pb-10 pt-12 sm:pt-14">
+        <section className="mx-auto max-w-6xl px-5 pb-10 pt-12 sm:pt-14">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm font-bold uppercase text-arc">Dashboard</p>
@@ -384,7 +386,9 @@ export default async function DashboardPage() {
             />
           </div>
         ) : null}
-      </section>
-    </main>
+        </section>
+      </main>
+      <AppFooterStrip />
+    </>
   )
 }
