@@ -70,10 +70,10 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
 
   const queryAmount = initialAmount
   const queryChain = initialChain
-  const initialAmount = getQueryAmount(queryAmount) ?? '5.00'
+  const initialPaymentAmount = getQueryAmount(queryAmount) ?? '5.00'
   const initialSourceChainId = getQueryChainId(queryChain) ?? String(ARC_TESTNET_ID)
   const [payForm, setPayForm] = useState({
-    amount: initialAmount,
+    amount: initialPaymentAmount,
     sourceChainId: initialSourceChainId
   })
   const [sendForm, setSendForm] = useState({
