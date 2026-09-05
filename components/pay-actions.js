@@ -5,7 +5,6 @@ import { UnifiedBalanceKit } from '@circle-fin/unified-balance-kit'
 import { AlertCircle, ExternalLink, Loader2, Send } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { formatUnits, isAddress, parseUnits } from 'viem'
 import {
   useAccount,
@@ -29,25 +28,29 @@ const WalletConnectButton = dynamic(() => import('./wallet-connect-button'), {
 })
 
 function getQueryAmount(value) {
-  if (!value) {
+  const rawValue = Array.isArray(value) ? value[0] : value
+
+  if (!rawValue) {
     return null
   }
 
-  const amount = Number(value)
+  const amount = Number(rawValue)
 
   if (!Number.isFinite(amount) || amount <= 0 || amount > 100) {
     return null
   }
 
-  return value
+  return String(rawValue)
 }
 
 function getQueryChainId(value) {
-  if (!value) {
+  const rawValue = Array.isArray(value) ? value[0] : value
+
+  if (!rawValue) {
     return null
   }
 
-  const normalized = String(value).trim().toLowerCase()
+  const normalized = String(rawValue).trim().toLowerCase()
   const selected = chainOptions.find((option) => {
     const labelSlug = option.label.toLowerCase().replaceAll(' ', '-')
 
@@ -57,8 +60,7 @@ function getQueryChainId(value) {
   return selected ? String(selected.id) : null
 }
 
-export function PayActions({ page, isOwner = false }) {
-  const searchParams = useSearchParams()
+export function PayActions({ page, isOwner = false, initialAmount, initialChain }) {
   const { address, connector, isConnected } = useAccount()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
@@ -66,8 +68,8 @@ export function PayActions({ page, isOwner = false }) {
   const arcPublicClient = usePublicClient({ chainId: ARC_TESTNET_ID })
   const kit = useMemo(() => new UnifiedBalanceKit(), [])
 
-  const queryAmount = searchParams.get('amount')
-  const queryChain = searchParams.get('chain')
+  const queryAmount = initialAmount
+  const queryChain = initialChain
   const initialAmount = getQueryAmount(queryAmount) ?? '5.00'
   const initialSourceChainId = getQueryChainId(queryChain) ?? String(ARC_TESTNET_ID)
   const [payForm, setPayForm] = useState({

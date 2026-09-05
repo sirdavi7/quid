@@ -1,12 +1,10 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Eye, EyeOff, KeyRound, Loader2 } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 export function ResetPasswordForm({ initialHasSession = false }) {
-  const router = useRouter()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [status, setStatus] = useState('')
@@ -51,7 +49,7 @@ export function ResetPasswordForm({ initialHasSession = false }) {
       }
 
       setStatus('Password updated. Taking you to your dashboard...')
-      window.setTimeout(() => router.replace('/dashboard'), 900)
+      window.setTimeout(() => window.location.replace('/dashboard'), 900)
     } catch (requestError) {
       setError(requestError.message || 'Could not update password.')
     } finally {

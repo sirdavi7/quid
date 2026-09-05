@@ -1,11 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Loader2, Sparkles } from 'lucide-react'
 
 export function CreatePageForm() {
-  const router = useRouter()
   const [form, setForm] = useState({
     name: '',
     username: '',
@@ -36,7 +34,7 @@ export function CreatePageForm() {
         throw new Error(payload.error ?? 'Could not create this page.')
       }
  
-      router.push('/dashboard')
+      window.location.replace('/dashboard')
     } catch (submitError) {
       setError(submitError.message)
     } finally {

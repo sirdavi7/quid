@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { Eye, EyeOff, KeyRound, Loader2, LogIn, Mail, UserPlus } from 'lucide-react'
 import { getFriendlyAuthError } from '@/lib/auth-errors'
@@ -8,7 +8,6 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 import { getSafeNextPath } from '@/lib/routes'
 
 export function LoginForm({ nextPath = '/dashboard' }) {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [mode, setMode] = useState('sign-in')
   const [email, setEmail] = useState('')
@@ -30,7 +29,7 @@ export function LoginForm({ nextPath = '/dashboard' }) {
     supabase.auth.getSession()
       .then(({ data }) => {
         if (isMounted && data.session) {
-          router.replace(next)
+          finishAuthRedirect(next)
         }
       })
       .catch(() => {
@@ -43,7 +42,7 @@ export function LoginForm({ nextPath = '/dashboard' }) {
       data: { subscription }
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-        router.replace(next)
+        finishAuthRedirect(next)
       }
     })
 
@@ -51,7 +50,7 @@ export function LoginForm({ nextPath = '/dashboard' }) {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [next, router])
+  }, [next])
 
   function resetMessages() {
     setStatus('')
@@ -67,6 +66,10 @@ export function LoginForm({ nextPath = '/dashboard' }) {
 
   function getEmailRedirectUrl(target = next) {
     return `${window.location.origin}/auth/callback?next=${encodeURIComponent(target)}`
+  }
+
+  function finishAuthRedirect(target = next) {
+    window.location.replace(target)
   }
 
   async function handlePasswordSubmit(event) {
@@ -96,7 +99,7 @@ export function LoginForm({ nextPath = '/dashboard' }) {
       }
 
       if (data.session) {
-        router.replace(next)
+        finishAuthRedirect(next)
         return
       }
 

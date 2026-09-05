@@ -47,6 +47,7 @@ export function ScanPayCard() {
   const [paymentLink, setPaymentLink] = useState('')
   const [error, setError] = useState('')
   const [detectorAvailable, setDetectorAvailable] = useState(null)
+  const [isCameraReady, setIsCameraReady] = useState(false)
 
   function stopCamera() {
     streamRef.current?.getTracks().forEach((track) => track.stop())
@@ -54,7 +55,20 @@ export function ScanPayCard() {
     if (videoRef.current) {
       videoRef.current.srcObject = null
     }
+    setIsCameraReady(false)
     setIsScanning(false)
+  }
+
+  async function attachCameraStream(stream) {
+    const video = videoRef.current
+
+    if (!video) {
+      throw new Error('Camera preview is still getting ready. Try again in a moment.')
+    }
+
+    video.srcObject = stream
+    await video.play()
+    setIsCameraReady(true)
   }
 
   function openPayment(rawValue) {
@@ -78,19 +92,16 @@ export function ScanPayCard() {
 
     try {
       setError('')
+      setIsCameraReady(false)
+      setIsScanning(true)
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: 'environment' } },
         audio: false
       })
       streamRef.current = stream
-      setIsScanning(true)
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
+      await attachCameraStream(stream)
     } catch {
-      setError('Camera permission was not granted.')
+      setError('Camera could not start. Check browser camera permission and try again.')
       stopCamera()
     }
   }
@@ -145,7 +156,7 @@ export function ScanPayCard() {
     const interval = window.setInterval(async () => {
       const video = videoRef.current
 
-      if (!video || video.readyState < 2) {
+      if (!video || !isCameraReady || video.readyState < 2) {
         return
       }
 
@@ -164,7 +175,7 @@ export function ScanPayCard() {
       cancelled = true
       window.clearInterval(interval)
     }
-  }, [isScanning])
+  }, [isCameraReady, isScanning])
 
   useEffect(() => {
     setDetectorAvailable(Boolean(getBarcodeDetector()))
@@ -189,11 +200,25 @@ export function ScanPayCard() {
         </div>
       </div>
 
-      {isScanning ? (
-        <div className="mt-5 overflow-hidden rounded-lg border border-arc/20 bg-night">
-          <video ref={videoRef} className="aspect-video w-full object-cover" muted playsInline />
+      <div className={`${isScanning ? 'mt-5' : 'hidden'} overflow-hidden rounded-lg border border-arc/20 bg-night`}>
+        <div className="relative">
+          <video
+            ref={videoRef}
+            className="aspect-video w-full bg-night object-cover"
+            muted
+            playsInline
+            autoPlay
+            onLoadedMetadata={() => setIsCameraReady(true)}
+          />
+          {!isCameraReady ? (
+            <div className="absolute inset-0 grid place-items-center bg-night text-sm font-bold text-white/70">
+              <span className="inline-flex items-center gap-2">
+                <Loader2 size={16} className="animate-spin" /> Starting camera
+              </span>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
         <label className="grid gap-2">
