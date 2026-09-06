@@ -50,7 +50,7 @@ const slides = [
     route: 'sender to received wallet',
     chain: 'Arc Testnet',
     proof: 'Receipt',
-    accent: 'text-coral',
+    accent: 'text-mint',
     icon: ReceiptText
   },
   {
