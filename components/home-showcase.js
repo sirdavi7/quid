@@ -9,7 +9,7 @@ const slides = [
     label: 'Pay Page',
     title: 'One public place to get paid',
     body: 'Share a Quid link with your handle, payment note, receive wallet, and checkout flow already connected.',
-    stat: '/pay/sirdavid',
+    stat: '/pay/username',
     meta: 'Public link',
     route: 'share to payer',
     chain: 'Any supported chain',
@@ -168,12 +168,12 @@ export function HomeShowcase() {
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-md border border-arc/20 bg-haze p-3 sm:p-4 dark:border-arc/30 dark:bg-haze">
+          <div className="rounded-md border border-mint/25 bg-mint/10 p-3 sm:p-4 dark:border-mint/30 dark:bg-mint/10">
             <ReceiptText size={18} className="text-mint" />
             <p className="mt-4 text-sm font-black">Receipts tracked</p>
           </div>
-          <div className="rounded-md border border-arc/20 bg-haze p-3 sm:p-4 dark:border-arc/30 dark:bg-haze">
-            <QrCode size={18} className="text-coral" />
+          <div className="rounded-md border border-mint/25 bg-mint/10 p-3 sm:p-4 dark:border-mint/30 dark:bg-mint/10">
+            <QrCode size={18} className="text-mint" />
             <p className="mt-4 text-sm font-black">QR payments</p>
           </div>
           <div className="rounded-md border border-arc/25 bg-gradient-to-r from-arc to-violet p-3 text-white sm:p-4">

@@ -55,8 +55,8 @@ export function AppFooter({ paymentPageHref = '/dashboard' }) {
           </div>
         </div>
         <div className="mt-10 flex flex-col gap-3 border-t border-arc/10 pt-5 text-xs font-semibold text-ink/45 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; 2026 Quid USDC Pay. Built on Circle and Arc.</p>
-          <p>Pay links, received balances, and withdrawals in one workspace.</p>
+          <p>&copy; 2026 Quid USDC Payments. Built on Circle and Arc.</p>
+          <p>Pay links, QR codes, received balances, and withdrawals in one workspace.</p>
         </div>
       </div>
     </footer>

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ArrowRight, BadgeCheck, BadgeDollarSign, CircleHelp, Link2, ReceiptText, ScanLine, Send, ShieldCheck, Sparkles, WalletCards } from 'lucide-react'
+import Image from 'next/image'
 import { AppHeader } from '@/components/app-header'
 import { AppFooter } from '@/components/app-footer'
 import { HomeShowcase } from '@/components/home-showcase'
@@ -165,12 +166,10 @@ export default async function Home() {
       <section id="product" className="mx-auto max-w-6xl px-5 pb-16">
         <ScrollReveal>
           <p className="text-xs font-black uppercase text-arc">Product</p>
-          <div className="mt-3 grid gap-4 md:grid-cols-[0.85fr_1.15fr] md:items-end">
-            <h2 className="text-3xl font-black leading-tight text-ink md:text-4xl">One page. A full USDC workflow.</h2>
-            <p className="text-lg leading-8 text-ink/60">
-              Quid turns pay links, QR receiving, wallet checkout, balance checks, receipts, and Arc withdrawals into one calm workspace.
-            </p>
-          </div>
+          <h2 className="mt-3 max-w-3xl text-3xl font-black leading-tight text-ink md:text-4xl">One page. A full USDC workflow.</h2>
+          <p className="mt-4 max-w-3xl text-lg leading-8 text-ink/60">
+            Quid turns pay links, QR receiving, wallet checkout, balance checks, receipts, and Arc withdrawals into one calm workspace.
+          </p>
         </ScrollReveal>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
@@ -240,6 +239,13 @@ export default async function Home() {
       <section className="mx-auto max-w-6xl px-5 pb-10">
         <ScrollReveal>
           <div className="relative overflow-hidden rounded-lg border border-arc/25 bg-gradient-to-r from-arc/90 via-violet/80 to-arc/75 p-7 text-white shadow-glow md:p-10">
+            <Image
+              src="/brand/quid-q.png"
+              alt=""
+              width={360}
+              height={360}
+              className="pointer-events-none absolute -right-16 -top-24 w-72 opacity-20 md:w-96"
+            />
             <div className="relative max-w-2xl">
               <p className="text-xs font-black uppercase text-white/50">Get started</p>
               <h2 className="mt-3 text-3xl font-black leading-tight md:text-4xl">Launch a USDC payment page people understand.</h2>
