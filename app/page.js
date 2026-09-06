@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, BadgeCheck, BadgeDollarSign, CircleHelp, Link2, ReceiptText, Send, ShieldCheck, Sparkles, WalletCards } from 'lucide-react'
-import Image from 'next/image'
+import { ArrowRight, BadgeCheck, BadgeDollarSign, CircleHelp, Link2, ReceiptText, ScanLine, Send, ShieldCheck, Sparkles, WalletCards } from 'lucide-react'
 import { AppHeader } from '@/components/app-header'
 import { AppFooter } from '@/components/app-footer'
 import { HomeShowcase } from '@/components/home-showcase'
@@ -26,40 +25,45 @@ export default async function Home() {
   const productCards = [
     {
       icon: Link2,
-      title: 'Payment pages',
-      body: 'Create one public Quid link with your handle, payment note, and Arc USDC receiving wallet.'
+      title: 'Public pay pages',
+      body: 'Create one Quid page with your handle, payment note, QR receive card, and clean checkout flow.'
     },
     {
       icon: WalletCards,
-      title: 'Wallet checkout',
-      body: 'Payers connect browser wallets or WalletConnect and send USDC from supported test chains.'
+      title: 'Connected wallet checkout',
+      body: 'Payers connect a browser wallet, choose a source chain, and send USDC without learning your wallet setup.'
+    },
+    {
+      icon: ScanLine,
+      title: 'Scan and pay',
+      body: 'Owners can scan a Quid QR, upload a QR image, or paste a pay link when a payment starts somewhere else.'
     },
     {
       icon: ReceiptText,
-      title: 'Money records',
-      body: 'Submitted checkout payments, owner sends, withdrawals, and direct deposits stay separated.'
+      title: 'Readable money movement',
+      body: 'Checkout payments, direct deposits, owner sends, balance detects, and withdrawals speak one transaction language.'
     },
     {
       icon: Send,
       title: 'Arc withdrawals',
-      body: 'Move received USDC from the Circle-backed page wallet to your chosen Arc recipient.'
+      body: 'Move received USDC from the Circle-backed page wallet to your chosen Arc recipient with explorer proof.'
     },
     {
       icon: BadgeDollarSign,
       title: 'Balance clarity',
-      body: 'Show selected-chain USDC, native gas token balance, received wallet balance, and Gateway balance.'
+      body: 'Show selected-chain USDC, Arc received balance, checkout totals, withdrawal totals, and Gateway context.'
     },
     {
       icon: ShieldCheck,
-      title: 'Circle stack',
-      body: 'Built around Circle Wallets, Arc Testnet USDC, Paymaster-ready UX, and Gateway rails.'
+      title: 'Circle and Arc rails',
+      body: 'Built around Circle Wallets, Arc Testnet USDC, ArcScan verification, and Gateway-aware payment flows.'
     }
   ]
 
   const reasons = [
     ['Simple for payers', 'Visitors see who they are paying, choose an amount, connect a wallet, and get a receipt path.'],
-    ['Clear for creators', 'Dashboard totals, activity, direct deposits, and payout controls live behind your account.'],
-    ['Built for trust', 'Owner-only actions, readable balances, and explorer links make money movement easier to verify.']
+    ['Clear for creators', 'Dashboard totals, supported-chain wallets, checkout records, and payout controls stay behind your account.'],
+    ['Built for trust', 'Owner-only actions, readable transaction labels, and explorer links make money movement easier to verify.']
   ]
 
   const faqs = [
@@ -87,59 +91,66 @@ export default async function Home() {
         <FaucetNavButton />
       </AppHeader>
 
-      <section className="mx-auto grid max-w-6xl gap-8 px-4 pb-14 pt-10 sm:px-5 sm:pt-12 lg:grid-cols-[minmax(0,0.82fr)_minmax(360px,0.9fr)] lg:items-center">
-        <div>
-          <p className="mb-5 inline-flex rounded-md border border-arc/20 bg-haze px-3 py-1 text-sm font-bold text-arc">
+      <section className="mx-auto max-w-6xl px-4 pb-12 pt-16 sm:px-5 sm:pt-20 lg:pt-24">
+        <div className="max-w-4xl">
+          <p className="mb-5 inline-flex max-w-full rounded-md border border-arc/20 bg-haze px-3 py-2 text-sm font-bold leading-5 text-arc">
             Arc Testnet, Circle Wallets, Gateway
           </p>
-          <h1 className="max-w-3xl text-4xl font-black leading-[1.04] text-ink sm:text-5xl lg:text-6xl">
-            Your USDC pay link, ready for anyone.
+          <h1 className="text-4xl font-black leading-[1.04] text-ink sm:text-5xl lg:text-6xl">
+            Your USDC payment workspace.
           </h1>
-          <p className="mt-5 max-w-2xl text-lg leading-8 text-ink/70 lg:text-xl">
-            Create one Quid page, receive USDC from connected wallets, and withdraw from your Circle-backed Arc wallet without making payers learn your setup.
+          <p className="mt-5 max-w-3xl text-lg leading-8 text-ink/70 lg:text-xl">
+            Quid gives you one public pay page, connected-wallet checkout, QR scan and pay, readable receipts, and owner controls for received USDC.
           </p>
-
-          <div className="mt-7 grid gap-3 sm:grid-cols-3 lg:max-w-xl">
-            {[
-              ['01', 'Create link'],
-              ['02', 'Receive USDC'],
-              ['03', 'Withdraw on Arc']
-            ].map(([step, label]) => (
-              <div key={step} className="rounded-md border border-arc/20 bg-white px-3 py-3 shadow-panel">
-                <p className="text-xs font-black text-arc">{step}</p>
-                <p className="mt-1 text-sm font-black text-ink">{label}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href={user ? '/dashboard' : '/create'}
-              className="quid-primary-action h-12 w-full px-5 sm:w-auto"
-            >
-              {user ? 'Go to Dashboard' : 'Get Started'} <ArrowRight size={18} />
-            </Link>
-            <a
-              href="https://faucet.circle.com"
-              target="_blank"
-              rel="noreferrer"
-              className="quid-secondary-action h-12 w-full px-5 sm:w-auto"
-            >
-              Get test USDC
-            </a>
-          </div>
         </div>
 
-        <div className="w-full lg:pt-12">
-          <HomeShowcase />
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ['01', 'Create a pay page'],
+            ['02', 'Receive by link or QR'],
+            ['03', 'Track every movement'],
+            ['04', 'Withdraw on Arc']
+          ].map(([step, label]) => (
+            <div key={step} className="rounded-md border border-arc/20 bg-white px-4 py-4 shadow-panel">
+              <p className="text-xs font-black text-arc">{step}</p>
+              <p className="mt-2 text-sm font-black text-ink">{label}</p>
+            </div>
+          ))}
         </div>
+
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link
+            href={user ? '/dashboard' : '/create'}
+            className="quid-primary-action h-12 w-full px-5 sm:w-auto"
+          >
+            {user ? 'Go to Dashboard' : 'Create your Quid page'} <ArrowRight size={18} />
+          </Link>
+          <Link
+            href={user ? paymentPageHref : '/create'}
+            className="quid-secondary-action h-12 w-full px-5 sm:w-auto"
+          >
+            {user ? 'Open payment page' : 'Create pay link'}
+          </Link>
+          <a
+            href="https://faucet.circle.com"
+            target="_blank"
+            rel="noreferrer"
+            className="quid-secondary-action h-12 w-full px-5 sm:w-auto"
+          >
+            Get test USDC
+          </a>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-5">
+        <HomeShowcase />
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-4 px-5 pt-8 pb-16 md:grid-cols-3 lg:pt-10">
         {[
-          ['Fast checkout', 'Wallet connect, chain selection, and USDC transfer in one focused page.'],
-          ['Owner controls', 'Receive cards, balances, dashboard records, and withdrawals stay account-protected.'],
-          ['Readable receipts', 'Activity is written in human language with amounts, addresses, chain, and explorer links.']
+          ['Pay links that feel complete', 'Each public page carries the recipient, amount flow, chain choice, receive QR, and proof path.'],
+          ['Owner controls stay protected', 'Balances, dashboard records, scan tools, and withdrawals remain account-only.'],
+          ['Transactions speak clearly', 'Activity is written with amount, route, chain, status, and explorer access where available.']
         ].map(([title, body]) => (
           <ScrollReveal key={title}>
             <article className="h-full rounded-lg border border-arc/20 bg-white p-5 shadow-panel">
@@ -155,9 +166,9 @@ export default async function Home() {
         <ScrollReveal>
           <p className="text-xs font-black uppercase text-arc">Product</p>
           <div className="mt-3 grid gap-4 md:grid-cols-[0.85fr_1.15fr] md:items-end">
-            <h2 className="text-3xl font-black leading-tight text-ink md:text-4xl">One page. Every USDC payment workflow.</h2>
+            <h2 className="text-3xl font-black leading-tight text-ink md:text-4xl">One page. A full USDC workflow.</h2>
             <p className="text-lg leading-8 text-ink/60">
-              Quid turns payment links, checkout, balance checks, receive tools, and Arc withdrawals into one workspace.
+              Quid turns pay links, QR receiving, wallet checkout, balance checks, receipts, and Arc withdrawals into one calm workspace.
             </p>
           </div>
         </ScrollReveal>
@@ -185,7 +196,7 @@ export default async function Home() {
           <p className="text-xs font-black uppercase text-arc">Why Quid</p>
           <h2 className="mt-3 text-3xl font-black leading-tight text-ink md:text-4xl">A pay page that explains the money.</h2>
           <p className="mt-4 text-lg leading-8 text-ink/60">
-            The interface stays calm while the payment flow remains explicit: who pays, where USDC lands, and how the owner withdraws.
+            The interface stays calm while the payment flow remains explicit: who is paying, where USDC lands, what chain it used, and how the owner moves funds.
           </p>
         </ScrollReveal>
 
@@ -229,18 +240,11 @@ export default async function Home() {
       <section className="mx-auto max-w-6xl px-5 pb-10">
         <ScrollReveal>
           <div className="relative overflow-hidden rounded-lg border border-arc/25 bg-gradient-to-r from-arc/90 via-violet/80 to-arc/75 p-7 text-white shadow-glow md:p-10">
-            <Image
-              src="/brand/quid-q.png"
-              alt=""
-              width={360}
-              height={360}
-              className="pointer-events-none absolute -right-16 -top-24 w-72 opacity-20 md:w-96"
-            />
             <div className="relative max-w-2xl">
               <p className="text-xs font-black uppercase text-white/50">Get started</p>
               <h2 className="mt-3 text-3xl font-black leading-tight md:text-4xl">Launch a USDC payment page people understand.</h2>
               <p className="mt-3 text-lg leading-8 text-white/75">
-                Create your Quid link, test the payment flow, and move received USDC with owner-only wallet controls.
+                Create your Quid link, test the payment flow, scan or share payment QR codes, and move received USDC with owner-only wallet controls.
               </p>
               <Link
                 href={user ? '/dashboard' : '/create'}

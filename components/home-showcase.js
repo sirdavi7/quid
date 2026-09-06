@@ -1,29 +1,68 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Link2, ReceiptText, Send, ShieldCheck, WalletCards } from 'lucide-react'
+import { Link2, QrCode, ReceiptText, ScanLine, Send, ShieldCheck, WalletCards } from 'lucide-react'
 import Image from 'next/image'
 
 const slides = [
   {
-    label: 'Create',
-    title: 'Claim a pay link',
-    body: 'Your Quid page carries your handle, wallet, payment note, and a clean checkout.',
-    stat: 'use-quid.app/username',
+    label: 'Pay Page',
+    title: 'One public place to get paid',
+    body: 'Share a Quid link with your handle, payment note, receive wallet, and checkout flow already connected.',
+    stat: '/pay/sirdavid',
+    meta: 'Public link',
+    route: 'share to payer',
+    chain: 'Any supported chain',
+    proof: 'Pay page',
+    accent: 'text-arc',
     icon: Link2
   },
   {
-    label: 'Receive',
-    title: 'Let payers checkout',
-    body: 'Payers connect a wallet, choose a supported source chain, and send USDC.',
-    stat: '+25.00 USDC',
+    label: 'QR',
+    title: 'Scan, upload, or paste a pay link',
+    body: 'Quid can open a payment from a live QR scan, an uploaded QR image, or a pasted Quid URL.',
+    stat: 'Scan to pay',
+    meta: 'Owner tool',
+    route: 'QR to checkout',
+    chain: 'Quid link',
+    proof: 'Open page',
+    accent: 'text-mint',
+    icon: ScanLine
+  },
+  {
+    label: 'Checkout',
+    title: 'Connected wallet payments',
+    body: 'Payers choose an amount and source chain, then send USDC from the wallet already in their browser.',
+    stat: '+20.00 USDC',
+    meta: 'Arc Testnet',
+    route: 'wallet to /pay',
+    chain: 'Arc Testnet',
+    proof: 'Explorer',
+    accent: 'text-mint',
     icon: WalletCards
   },
   {
+    label: 'Receipts',
+    title: 'Every movement gets context',
+    body: 'Activity shows amount, route, chain, transaction type, status, receipt, and explorer proof where available.',
+    stat: 'Direct deposit',
+    meta: 'Confirmed',
+    route: 'sender to received wallet',
+    chain: 'Arc Testnet',
+    proof: 'Receipt',
+    accent: 'text-coral',
+    icon: ReceiptText
+  },
+  {
     label: 'Withdraw',
-    title: 'Move funds on Arc',
-    body: 'Owner tools separate checkout records, direct deposits, balances, and payouts.',
-    stat: 'USDC withdrawal',
+    title: 'Move received USDC on Arc',
+    body: 'Owner controls let you withdraw from the Circle-backed received wallet to your chosen Arc recipient.',
+    stat: '-10.00 USDC',
+    meta: 'Explorer',
+    route: '/pay to wallet',
+    chain: 'Arc Testnet',
+    proof: 'ArcScan',
+    accent: 'text-arc',
     icon: Send
   }
 ]
@@ -40,7 +79,7 @@ export function HomeShowcase() {
   }, [])
 
   return (
-    <div className="home-showcase-static relative mx-auto w-full max-w-[560px] overflow-hidden rounded-lg border border-arc/20 bg-white p-2 shadow-panel sm:p-3 dark:bg-white/5">
+    <div className="home-showcase-static relative mx-auto w-full overflow-hidden rounded-lg border border-arc/20 bg-white p-2 shadow-panel sm:p-3 dark:bg-white/5">
       <div className="rounded-md bg-white p-3 text-ink sm:p-4 md:p-5 dark:bg-night dark:text-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-arc/15 pb-4 dark:border-white/10">
           <span>
@@ -62,7 +101,7 @@ export function HomeShowcase() {
             />
           </span>
           <div className="rounded-md border border-mint/25 bg-mint/10 px-3 py-2 text-xs font-black text-mint">
-            Arc Testnet
+            USDC workspace
           </div>
         </div>
 
@@ -75,20 +114,51 @@ export function HomeShowcase() {
               const Icon = item.icon
               return (
                 <article key={item.label} className="min-w-full">
-                  <div className="rounded-md border border-arc/25 bg-haze p-3 sm:p-4 dark:border-arc/35 dark:bg-haze">
-                    <div className="flex items-start justify-between gap-3">
+                  <div className="grid gap-4 rounded-md border border-arc/25 bg-haze p-3 sm:p-4 md:grid-cols-[1.05fr_0.95fr] dark:border-arc/35 dark:bg-haze">
+                    <div className="flex min-h-[18rem] flex-col justify-between">
                       <div>
-                        <p className="text-sm font-black text-mint">{item.label}</p>
-                        <h2 className="mt-1 text-2xl font-black leading-tight text-ink sm:text-3xl dark:text-white">{item.title}</h2>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className={`text-sm font-black ${item.accent}`}>{item.label}</p>
+                            <h2 className="mt-2 text-2xl font-black leading-tight text-ink sm:text-3xl dark:text-white">{item.title}</h2>
+                          </div>
+                          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-md border border-arc/35 bg-arc/15 text-mint">
+                            <Icon size={24} />
+                          </div>
+                        </div>
+                        <p className="mt-4 text-sm leading-6 text-ink/65 dark:text-white/70">{item.body}</p>
                       </div>
-                      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-md border border-arc/35 bg-arc/15 text-mint">
-                        <Icon size={24} />
+
+                      <div className="mt-5 rounded-md border border-arc/20 bg-white p-3 sm:p-4 dark:border-arc/30 dark:bg-night">
+                        <p className="text-xs font-black uppercase text-ink/45 dark:text-white/45">{item.meta}</p>
+                        <p className="mt-1 text-2xl font-black text-ink dark:text-white">{item.stat}</p>
                       </div>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-ink/65 dark:text-white/70">{item.body}</p>
-                    <div className="mt-4 rounded-md border border-arc/20 bg-white p-3 sm:p-4 dark:border-arc/30 dark:bg-night">
-                      <p className="text-xs font-black uppercase text-ink/45 dark:text-white/45">Live surface</p>
-                      <p className="mt-1 text-2xl font-black text-ink dark:text-white">{item.stat}</p>
+
+                    <div className="rounded-md border border-arc/20 bg-white p-3 dark:border-arc/30 dark:bg-night">
+                      <div className="flex items-center justify-between gap-3 border-b border-arc/10 pb-3">
+                        <div>
+                          <p className="text-xs font-black uppercase text-ink/45 dark:text-white/45">Movement</p>
+                          <p className="mt-1 text-lg font-black text-ink dark:text-white">{item.stat}</p>
+                        </div>
+                        <span className="rounded-md bg-mint/10 px-2 py-1 text-xs font-black uppercase text-mint">
+                          {item.meta}
+                        </span>
+                      </div>
+                      <div className="mt-4 grid gap-3 text-sm">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-ink/55 dark:text-white/55">Route</span>
+                          <span className="text-right font-black text-ink dark:text-white">{item.route}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-ink/55 dark:text-white/55">Chain</span>
+                          <span className="text-right font-black text-ink dark:text-white">{item.chain}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-ink/55 dark:text-white/55">Proof</span>
+                          <span className="text-right font-black text-arc">{item.proof}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </article>
@@ -97,10 +167,14 @@ export function HomeShowcase() {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded-md border border-arc/20 bg-haze p-3 sm:p-4 dark:border-arc/30 dark:bg-haze">
             <ReceiptText size={18} className="text-mint" />
             <p className="mt-4 text-sm font-black">Receipts tracked</p>
+          </div>
+          <div className="rounded-md border border-arc/20 bg-haze p-3 sm:p-4 dark:border-arc/30 dark:bg-haze">
+            <QrCode size={18} className="text-coral" />
+            <p className="mt-4 text-sm font-black">QR payments</p>
           </div>
           <div className="rounded-md border border-arc/25 bg-gradient-to-r from-arc to-violet p-3 text-white sm:p-4">
             <Send size={18} />
@@ -113,7 +187,7 @@ export function HomeShowcase() {
             <ShieldCheck size={18} className="text-arc" /> Circle-backed received wallet
           </div>
           <p className="mt-2 text-sm leading-6 text-ink/60 dark:text-white/65">
-            Received USDC lands in the page wallet, then moves to your chosen Arc address.
+            Received USDC lands in the page wallet, stays visible in your workspace, then moves to your chosen Arc address.
           </p>
         </div>
 
