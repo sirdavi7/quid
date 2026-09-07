@@ -138,7 +138,7 @@ export function HomeShowcase() {
                     <div className="rounded-md border border-arc/20 bg-white p-3 dark:border-arc/30 dark:bg-night">
                       <div className="flex items-center justify-between gap-3 border-b border-arc/10 pb-3">
                         <div>
-                          <p className="text-xs font-black uppercase text-ink/45 dark:text-white/45">Movement</p>
+                          <p className="text-xs font-black uppercase text-ink/45 dark:text-white/45">Quid</p>
                           <p className="mt-1 text-lg font-black text-ink dark:text-white">{item.stat}</p>
                         </div>
                         <span className="rounded-md bg-mint/10 px-2 py-1 text-xs font-black uppercase text-mint">
