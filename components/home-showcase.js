@@ -26,7 +26,7 @@ const slides = [
     route: 'QR to checkout',
     chain: 'Quid link',
     proof: 'Open page',
-    accent: 'text-mint',
+    accent: 'text-arc',
     icon: ScanLine
   },
   {
@@ -38,7 +38,7 @@ const slides = [
     route: 'wallet to /pay',
     chain: 'Arc Testnet',
     proof: 'Explorer',
-    accent: 'text-mint',
+    accent: 'text-arc',
     icon: WalletCards
   },
   {
@@ -50,7 +50,7 @@ const slides = [
     route: 'sender to received wallet',
     chain: 'Arc Testnet',
     proof: 'Receipt',
-    accent: 'text-mint',
+    accent: 'text-arc',
     icon: ReceiptText
   },
   {
@@ -122,7 +122,7 @@ export function HomeShowcase() {
                             <p className={`text-sm font-black ${item.accent}`}>{item.label}</p>
                             <h2 className="mt-2 text-2xl font-black leading-tight text-ink sm:text-3xl dark:text-white">{item.title}</h2>
                           </div>
-                          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-md border border-arc/35 bg-arc/15 text-mint">
+                          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-md border border-arc/35 bg-arc/15 text-arc">
                             <Icon size={24} />
                           </div>
                         </div>
@@ -168,12 +168,12 @@ export function HomeShowcase() {
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-md border border-mint/25 bg-mint/10 p-3 sm:p-4 dark:border-mint/30 dark:bg-mint/10">
-            <ReceiptText size={18} className="text-mint" />
+          <div className="rounded-md border border-arc/25 bg-arc/10 p-3 sm:p-4 dark:border-arc/30 dark:bg-arc/10">
+            <ReceiptText size={18} className="text-arc" />
             <p className="mt-4 text-sm font-black">Receipts tracked</p>
           </div>
-          <div className="rounded-md border border-mint/25 bg-mint/10 p-3 sm:p-4 dark:border-mint/30 dark:bg-mint/10">
-            <QrCode size={18} className="text-mint" />
+          <div className="rounded-md border border-arc/25 bg-arc/10 p-3 sm:p-4 dark:border-arc/30 dark:bg-arc/10">
+            <QrCode size={18} className="text-arc" />
             <p className="mt-4 text-sm font-black">QR payments</p>
           </div>
           <div className="rounded-md border border-arc/25 bg-gradient-to-r from-arc to-violet p-3 text-white sm:p-4">
