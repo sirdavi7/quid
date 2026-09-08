@@ -29,6 +29,10 @@ function friendlyPanelError(message) {
     return 'Quid could not reach the wallet service. Try again in a moment.'
   }
 
+  if (text.includes('rpc endpoint error') || text.includes('rate limit') || text.includes('timeout')) {
+    return 'The selected chain RPC is temporarily unavailable. Wait briefly, check Gateway balance, then try again.'
+  }
+
   return message || 'Wallet action failed.'
 }
 function GatewayBalanceSummary({ result }) {
@@ -40,7 +44,7 @@ function GatewayBalanceSummary({ result }) {
   const total = result.totalConfirmedBalance ?? depositor?.totalConfirmed ?? '0'
   const chainBreakdown = depositor?.breakdown ?? result.breakdown ?? []
   const chainsWithBalance = chainBreakdown.filter((item) => Number(item.confirmedBalance) > 0)
-  const visibleBreakdown = chainsWithBalance.length ? chainsWithBalance : chainBreakdown.slice(0, 4)
+  const visibleBreakdown = chainBreakdown
 
   return (
     <div className="mt-4 rounded-md border border-arc/20 bg-haze p-4">
@@ -54,7 +58,7 @@ function GatewayBalanceSummary({ result }) {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+      <div className="mt-4 grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
         {visibleBreakdown.map((item) => (
           <div key={item.chain} className="rounded-md border border-ink/10 bg-white p-3">
             <p className="text-sm font-black text-ink">{item.chain}</p>

@@ -168,14 +168,17 @@ export function LoginForm({ nextPath = '/dashboard' }) {
       const supabase = createSupabaseBrowserClient()
       const { error: signInError } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: getEmailRedirectUrl() }
+        options: {
+          emailRedirectTo: getEmailRedirectUrl(),
+          shouldCreateUser: false
+        }
       })
 
       if (signInError) {
         throw signInError
       }
 
-      setStatus('Check your inbox and spam folder for the secure Quid sign-in link.')
+      setStatus('If that email has a Quid account, a secure sign-in link will be sent.')
     } catch (requestError) {
       setError(getFriendlyAuthError(requestError.message))
     } finally {
@@ -360,7 +363,8 @@ export function LoginForm({ nextPath = '/dashboard' }) {
         </button>
       ) : null}
 
-      {showMagicLink ? (
+      {!isCreating ? (
+        showMagicLink ? (
         <button
           type="button"
           onClick={handleMagicLink}
@@ -378,7 +382,8 @@ export function LoginForm({ nextPath = '/dashboard' }) {
         >
           Use email link instead
         </button>
-      )}
+        )
+      ) : null}
     </form>
   )
 }
