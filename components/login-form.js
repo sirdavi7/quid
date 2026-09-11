@@ -340,50 +340,52 @@ export function LoginForm({ nextPath = '/dashboard' }) {
         {isCreating ? 'Create Quid account' : 'Sign in to Quid'}
       </button>
 
-      {!isCreating ? (
-        <button
-          type="button"
-          onClick={handlePasswordReset}
-          disabled={isSubmitting}
-          className="mt-3 h-10 w-full rounded-md text-sm font-bold text-ink/60 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {pendingAction === 'password-reset' ? 'Sending reset link...' : 'Forgot password?'}
-        </button>
-      ) : null}
+      <div className="min-h-[7.75rem]">
+        {!isCreating ? (
+          <button
+            type="button"
+            onClick={handlePasswordReset}
+            disabled={isSubmitting}
+            className="mt-3 h-10 w-full rounded-md text-sm font-bold text-ink/60 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pendingAction === 'password-reset' ? 'Sending reset link...' : 'Forgot password?'}
+          </button>
+        ) : null}
 
-      {isCreating && confirmationEmail ? (
-        <button
-          type="button"
-          onClick={handleResendConfirmation}
-          disabled={isSubmitting}
-          className="quid-secondary-action mt-3 h-11 w-full px-4 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {pendingAction === 'resend-confirmation' ? <Loader2 size={17} className="animate-spin" /> : <Mail size={17} />}
-          Resend confirmation email
-        </button>
-      ) : null}
+        {isCreating && confirmationEmail ? (
+          <button
+            type="button"
+            onClick={handleResendConfirmation}
+            disabled={isSubmitting}
+            className="quid-secondary-action mt-3 h-11 w-full px-4 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pendingAction === 'resend-confirmation' ? <Loader2 size={17} className="animate-spin" /> : <Mail size={17} />}
+            Resend confirmation email
+          </button>
+        ) : null}
 
-      {!isCreating ? (
-        showMagicLink ? (
-        <button
-          type="button"
-          onClick={handleMagicLink}
-          disabled={isSubmitting || !email}
-          className="quid-secondary-action mt-3 h-11 w-full px-4 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {pendingAction === 'magic-link' ? <Loader2 size={17} className="animate-spin" /> : <Mail size={17} />}
-          Send secure email link
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowMagicLink(true)}
-          className="mt-3 h-10 w-full rounded-md text-sm font-bold text-ink/60 hover:text-ink"
-        >
-          Use email link instead
-        </button>
-        )
-      ) : null}
+        {!isCreating ? (
+          showMagicLink ? (
+            <button
+              type="button"
+              onClick={handleMagicLink}
+              disabled={isSubmitting || !email}
+              className="quid-secondary-action mt-3 h-11 w-full px-4 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {pendingAction === 'magic-link' ? <Loader2 size={17} className="animate-spin" /> : <Mail size={17} />}
+              Send secure email link
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowMagicLink(true)}
+              className="mt-3 h-10 w-full rounded-md text-sm font-bold text-ink/60 hover:text-ink"
+            >
+              Use email link instead
+            </button>
+          )
+        ) : null}
+      </div>
     </form>
   )
 }

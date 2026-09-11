@@ -352,7 +352,7 @@ export function CreatorWalletPanel({ page }) {
 
         {!canWithdrawDirectly ? (
           <p className="mt-4 rounded-md border border-arc/20 bg-haze px-3 py-2 text-sm font-semibold text-ink/70">
-            {selectedSource.label} direct withdrawal uses Gateway. Deposit this source balance to Gateway first, then withdraw from Gateway to the recipient on Arc Testnet.
+            {selectedSource.label} direct withdrawal uses Gateway. Deposit this source balance to Gateway first, then withdraw from Gateway to the recipient on Arc Testnet. This Circle wallet also needs test {selectedSource.nativeSymbol} for the approval and deposit gas fees.
           </p>
         ) : null}
 

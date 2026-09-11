@@ -10,10 +10,10 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@circle-fin/adapter-circle-wallets": "1.4.2",
-    "@circle-fin/adapter-viem-v2": "1.14.0",
+    "@circle-fin/adapter-circle-wallets": "^1.7.2",
+    "@circle-fin/adapter-viem-v2": "^1.16.0",
     "@circle-fin/developer-controlled-wallets": "7.3.0",
-    "@circle-fin/unified-balance-kit": "1.2.2",
+    "@circle-fin/unified-balance-kit": "^1.6.0",
     "@rainbow-me/rainbowkit": "^2.2.11",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.111.0",
