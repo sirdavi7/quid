@@ -5,7 +5,7 @@ import { AppHeader } from '@/components/app-header'
 import { AppFooter } from '@/components/app-footer'
 import { HomeShowcase } from '@/components/home-showcase'
 import { ScrollReveal } from '@/components/scroll-reveal'
-import { CreateNavButton, DashboardNavButton, FaucetNavButton, HomeNavButton, LoginNavButton, SignOutNavButton } from '@/components/nav-buttons'
+import { CreateNavButton, DashboardNavButton, LoginNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getPageForOwner } from '@/lib/store'
 
