@@ -2,6 +2,7 @@
 import { createPublicClient, formatUnits, http } from 'viem'
 import { arcTestnet, ARC_USDC_ADDRESS, usdcAbi } from '@/lib/arc'
 import { validateAddress } from '@/lib/validation'
+import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
 const client = createPublicClient({
   chain: arcTestnet,
@@ -32,6 +33,7 @@ export async function POST(request) {
       rawBalance: rawBalance.toString()
     })
   } catch (error) {
-    return NextResponse.json({ error: error.message ?? 'Arc balance request failed.' }, { status: 500 })
+    logServerError('Arc balance', error)
+    return NextResponse.json({ error: getSafeApiError(error, { fallback: 'Your Arc received balance is unavailable right now. Try refreshing in a moment.' }) }, { status: 500 })
   }
 }

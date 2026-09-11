@@ -3,6 +3,7 @@ import { createPublicClient, formatUnits, http, parseAbiItem, parseUnits } from 
 import { arcTestnet, ARC_EXPLORER_URL, ARC_TESTNET_ID, usdcAbi } from '@/lib/arc'
 import { chains, chainOptions } from '@/lib/chains'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getSafeApiError, logServerError } from '@/lib/user-errors'
 import { listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, upsertWalletActivityRecords } from '@/lib/store'
 
 const transferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
@@ -303,6 +304,7 @@ export async function POST() {
       return NextResponse.json({ error: 'Wallet activity is rate limited right now. Saved wallet activity will still appear.' }, { status: 429 })
     }
 
-    return NextResponse.json({ error: message || 'Wallet activity sync failed.' }, { status: 500 })
+    logServerError('Wallet activity sync', error)
+    return NextResponse.json({ error: getSafeApiError(error, { fallback: 'Wallet activity is unavailable right now. Saved transactions will remain visible.' }) }, { status: 500 })
   }
 }

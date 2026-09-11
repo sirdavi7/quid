@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Eye, EyeOff, KeyRound, Loader2 } from 'lucide-react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
+import { getFriendlyAuthError } from '@/lib/auth-errors'
 
 export function ResetPasswordForm({ initialHasSession = false }) {
   const [password, setPassword] = useState('')
@@ -51,7 +52,7 @@ export function ResetPasswordForm({ initialHasSession = false }) {
       setStatus('Password updated. Taking you to your dashboard...')
       window.setTimeout(() => window.location.replace('/dashboard'), 900)
     } catch (requestError) {
-      setError(requestError.message || 'Could not update password.')
+      setError(getFriendlyAuthError(requestError.message))
     } finally {
       setIsSubmitting(false)
     }

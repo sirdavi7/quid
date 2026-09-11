@@ -3,6 +3,7 @@ import { createPublicClient, formatUnits, http } from 'viem'
 import { chains, chainOptions } from '@/lib/chains'
 import { usdcAbi } from '@/lib/arc'
 import { validateAddress } from '@/lib/validation'
+import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
 export async function POST(request) {
   try {
@@ -42,6 +43,7 @@ export async function POST(request) {
       rawBalance: rawBalance.toString()
     })
   } catch (error) {
-    return NextResponse.json({ error: error.message ?? 'Chain balance request failed.' }, { status: 500 })
+    logServerError('Chain balance', error)
+    return NextResponse.json({ error: getSafeApiError(error, { fallback: 'This received wallet balance is unavailable right now. Try again in a moment.' }) }, { status: 500 })
   }
 }

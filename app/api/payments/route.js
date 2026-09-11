@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { isAddress } from 'viem'
 import { createPaymentRecord, getPage } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
 export async function POST(request) {
   try {
@@ -52,6 +53,7 @@ export async function POST(request) {
 
     return NextResponse.json({ payment })
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    logServerError('Save payment record', error)
+    return NextResponse.json({ error: getSafeApiError(error, { fallback: 'The transaction was submitted, but Quid could not save its receipt yet. Refresh shortly to check your activity.' }) }, { status: 500 })
   }
 }

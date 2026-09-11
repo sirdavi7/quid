@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { AlertCircle, Database, Loader2, RefreshCw, Send, WalletCards } from 'lucide-react'
 import { ARC_TESTNET_ID } from '@/lib/arc'
 import { chainOptions } from '@/lib/chains'
+import { getFriendlyUserError } from '@/lib/user-errors'
 
 function formatBalance(value) {
   const amount = Number(value ?? 0)
@@ -18,22 +19,8 @@ function formatBalance(value) {
   })
 }
 
-function friendlyPanelError(message) {
-  const text = String(message || '').toLowerCase()
-
-  if (text.includes('json') || text.includes('doctype') || text.includes('unexpected token')) {
-    return 'Quid received an unreadable service response. Try again in a moment.'
-  }
-
-  if (text.includes('fetch failed') || text.includes('network')) {
-    return 'Quid could not reach the wallet service. Try again in a moment.'
-  }
-
-  if (text.includes('rpc endpoint error') || text.includes('rate limit') || text.includes('timeout')) {
-    return 'The selected chain RPC is temporarily unavailable. Wait briefly, check Gateway balance, then try again.'
-  }
-
-  return message || 'Wallet action failed.'
+function friendlyPanelError(error, options) {
+  return getFriendlyUserError(error, options)
 }
 function GatewayBalanceSummary({ result }) {
   if (!result) {
@@ -130,7 +117,7 @@ export function CreatorWalletPanel({ page }) {
       setWallets(payload.wallets ?? [])
       setSendResult(payload.created ? `Created ${payload.created} supported-chain wallet${payload.created === 1 ? '' : 's'} for this Quid page.` : 'Supported-chain wallets are already set up.')
     } catch (requestError) {
-      setError(friendlyPanelError(requestError.message))
+      setError(friendlyPanelError(requestError, { fallback: 'Quid could not set up the supported chain wallets. Try again in a moment.' }))
     } finally {
       setPendingAction('')
     }
@@ -162,7 +149,7 @@ export function CreatorWalletPanel({ page }) {
 
       setReceivedBalance(payload)
     } catch (requestError) {
-      setError(friendlyPanelError(requestError.message))
+      setError(friendlyPanelError(requestError, { chainLabel: selectedSource.label, fallback: 'This received wallet balance is unavailable right now. Try again in a moment.' }))
     } finally {
       setPendingAction('')
     }
@@ -207,7 +194,12 @@ export function CreatorWalletPanel({ page }) {
         setSendResult(payload.result?.explorerUrl ? `Gateway withdrawal submitted: ${payload.result.explorerUrl}` : `Gateway withdrawal submitted from ${selectedSource.label} to Arc Testnet.`)
       }
     } catch (requestError) {
-      setError(friendlyPanelError(requestError.message))
+      setError(friendlyPanelError(requestError, {
+        operation: action === 'deposit' ? 'gateway-deposit' : 'gateway-action',
+        chainLabel: selectedSource.label,
+        nativeSymbol: selectedSource.nativeSymbol,
+        fallback: action === 'send' ? 'We could not submit this Gateway withdrawal. Check your Gateway balance, then try again.' : undefined
+      }))
     } finally {
       setPendingAction('')
     }
@@ -239,7 +231,7 @@ export function CreatorWalletPanel({ page }) {
 
       setSendResult(payload.result?.id ? `Withdrawal submitted. Circle transaction ID: ${payload.result.id}` : 'Withdrawal submitted from your received USDC wallet.')
     } catch (requestError) {
-      setError(friendlyPanelError(requestError.message))
+      setError(friendlyPanelError(requestError, { fallback: 'We could not submit this Arc withdrawal. Check the recipient and wallet balance, then try again.' }))
     } finally {
       setPendingAction('')
     }

@@ -3,6 +3,7 @@ import { sendArcUsdcFromCircleWallet } from '@/lib/circleWallets'
 import { createPaymentRecord, getPageForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { validateAddress, validateAmount } from '@/lib/validation'
+import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
 export async function POST(request) {
   try {
@@ -56,6 +57,7 @@ export async function POST(request) {
 
     return NextResponse.json({ result, explorerUrl })
   } catch (error) {
-    return NextResponse.json({ error: error.message ?? 'Payout request failed.' }, { status: 500 })
+    logServerError('Arc withdrawal', error)
+    return NextResponse.json({ error: getSafeApiError(error, { fallback: 'We could not submit this Arc withdrawal. Check the recipient and wallet balance, then try again.' }) }, { status: 500 })
   }
 }

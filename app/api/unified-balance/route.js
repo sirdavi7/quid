@@ -5,6 +5,7 @@ import { depositCircleWalletUsdcToGateway } from '@/lib/circleWallets'
 import { createPaymentRecord, getPageForOwner, getWalletForPageChain } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createCircleWalletsUnifiedAdapter, createServerUnifiedBalanceKit } from '@/lib/unifiedBalance'
+import { getSafeApiError, logServerError } from '@/lib/user-errors'
 import { validateAddress, validateAmount } from '@/lib/validation'
 
 function getSourceChain(chainId) {
@@ -48,8 +49,10 @@ async function withRpcRetry(operation) {
 }
 
 export async function POST(request) {
+  let body = {}
+
   try {
-    const body = await request.json()
+    body = await request.json()
     const action = body.action
     const amount = String(body.amount ?? '')
     const source = getSourceChain(body.sourceChainId)
@@ -144,6 +147,14 @@ export async function POST(request) {
 
     return NextResponse.json({ error: 'Unsupported Unified Balance action.' }, { status: 400 })
   } catch (error) {
-    return NextResponse.json({ error: error.message ?? 'Unified Balance request failed.' }, { status: 500 })
+    const source = getSourceChain(body?.sourceChainId)
+    logServerError(`Unified Balance ${body?.action ?? 'request'}`, error)
+    return NextResponse.json({
+      error: getSafeApiError(error, {
+        operation: body?.action === 'deposit' ? 'gateway-deposit' : 'gateway-action',
+        chainLabel: source.label,
+        nativeSymbol: source.nativeSymbol
+      })
+    }, { status: 500 })
   }
 }

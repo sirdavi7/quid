@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from 'next/server'
 import { getPage, updatePageForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
 export async function GET(_request, { params }) {
   const page = await getPage(params.username)
@@ -41,6 +42,7 @@ export async function PATCH(request, { params }) {
 
     return NextResponse.json({ page })
   } catch (error) {
-    return NextResponse.json({ error: error.message ?? 'Unable to update page.' }, { status: 500 })
+    logServerError('Update Quid page', error)
+    return NextResponse.json({ error: getSafeApiError(error, { fallback: 'Quid could not save those page details right now. Try again in a moment.' }) }, { status: 500 })
   }
 }

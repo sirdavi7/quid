@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ExternalLink, Loader2, Save } from 'lucide-react'
+import { getFriendlyUserError } from '@/lib/user-errors'
 
 export function EditPageForm({ page }) {
   const router = useRouter()
@@ -44,7 +45,7 @@ export function EditPageForm({ page }) {
       setStatus('Payment page updated.')
       router.refresh()
     } catch (submitError) {
-      setError(submitError.message)
+      setError(getFriendlyUserError(submitError, { fallback: 'Quid could not save those page details right now. Try again in a moment.' }))
     } finally {
       setIsSubmitting(false)
     }

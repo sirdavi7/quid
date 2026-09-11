@@ -17,6 +17,7 @@ import {
 } from 'wagmi'
 import { ARC_TESTNET_CHAIN, ARC_TESTNET_ID, ARC_USDC_ADDRESS, usdcAbi } from '@/lib/arc'
 import { chainOptions } from '@/lib/chains'
+import { getFriendlyUserError } from '@/lib/user-errors'
 
 const WalletConnectButton = dynamic(() => import('./wallet-connect-button'), {
   ssr: false,
@@ -159,7 +160,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       return 'This wallet does not have enough USDC to complete the payment.'
     }
 
-    return message ?? 'Payment failed.'
+    return getFriendlyUserError(message, { fallback: 'We could not complete this payment. Check your wallet and try again.' })
   }
 
   function shortAddress(value) {

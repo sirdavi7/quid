@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, Copy, Loader2, RefreshCw, WalletCards } from 'lucide-react'
 import { chainOptions } from '@/lib/chains'
+import { getFriendlyUserError } from '@/lib/user-errors'
 
 function shortAddress(address) {
   if (!address) return 'Not set up'
@@ -77,7 +78,7 @@ export function DashboardChainWallets({ initialWallets = [], page = null, wallet
       setWallets(payload.wallets ?? [])
       setStatus('ready')
     } catch (requestError) {
-      setError(requestError.message)
+      setError(getFriendlyUserError(requestError, { fallback: 'Your supported chain wallets are unavailable right now. Try again in a moment.' }))
       setStatus('error')
     }
   }

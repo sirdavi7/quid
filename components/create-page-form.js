@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
+import { getFriendlyUserError } from '@/lib/user-errors'
 
 export function CreatePageForm() {
   const [form, setForm] = useState({
@@ -36,7 +37,7 @@ export function CreatePageForm() {
  
       window.location.replace('/dashboard')
     } catch (submitError) {
-      setError(submitError.message)
+      setError(getFriendlyUserError(submitError, { fallback: 'Quid could not create this page right now. Try again in a moment.' }))
     } finally {
       setIsSubmitting(false)
     }

@@ -3,6 +3,7 @@ import { createQuidWalletForChain } from '@/lib/circleWallets'
 import { chainOptions } from '@/lib/chains'
 import { getPageForOwner, listWalletsForPage, upsertPageWalletRecords } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
 function toWalletRecord(page, wallet) {
   return {
@@ -58,7 +59,8 @@ export async function GET() {
     const wallets = await listWalletsForPage(page.id)
     return NextResponse.json({ wallets })
   } catch (error) {
-    return NextResponse.json({ error: error.message ?? 'Unable to load page wallets.' }, { status: 500 })
+    logServerError('Load page wallets', error)
+    return NextResponse.json({ error: getSafeApiError(error, { fallback: 'Your chain wallets are unavailable right now. Try again in a moment.' }) }, { status: 500 })
   }
 }
 
@@ -105,6 +107,7 @@ export async function POST() {
       wallets
     })
   } catch (error) {
-    return NextResponse.json({ error: error.message ?? 'Unable to create page wallets.' }, { status: 500 })
+    logServerError('Set up chain wallets', error)
+    return NextResponse.json({ error: getSafeApiError(error, { fallback: 'Quid could not set up the supported chain wallets. Try again in a moment.' }) }, { status: 500 })
   }
 }

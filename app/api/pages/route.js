@@ -3,6 +3,7 @@ import { createQuidWallets } from '@/lib/circleWallets'
 import { createPage, getPageForOwner, upsertPageWalletRecords } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { normalizeUsername, validateUsername } from '@/lib/validation'
+import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
 export async function GET() {
   return NextResponse.json({ error: 'Page directory is not public.' }, { status: 405 })
@@ -70,6 +71,9 @@ export async function POST(request) {
     return NextResponse.json({ page }, { status: 201 })
   } catch (error) {
     const status = error.message?.includes('Username already') ? 409 : 500
-    return NextResponse.json({ error: error.message ?? 'Unable to create page.' }, { status })
+    logServerError('Create Quid page', error)
+    return NextResponse.json({
+      error: status === 409 ? 'That Quid username is already in use. Choose another one.' : getSafeApiError(error, { fallback: 'Quid could not create this page right now. Try again in a moment.' })
+    }, { status })
   }
 }
