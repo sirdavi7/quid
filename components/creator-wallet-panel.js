@@ -54,6 +54,10 @@ function GatewayBalanceSummary({ result }) {
         ))}
       </div>
 
+      <p className="mt-3 text-xs leading-5 text-ink/55">
+        Gateway reports all supported EVM chains. Deposit controls appear only for chains with a Quid-managed receive wallet.
+      </p>
+
       {!chainsWithBalance.length ? (
         <p className="mt-3 text-sm leading-6 text-ink/60">
           Gateway is separate from your received Arc wallet funds. It only shows USDC that has been moved into Circle Gateway for cross-chain spending.

@@ -160,6 +160,36 @@ function activityTouchesWallet(activity, wallet, option) {
   return activity.chain === option.label && normalizeAddress(activity.walletAddress) === normalizeAddress(wallet.walletAddress)
 }
 
+function isSyntheticBalanceRecord(activity) {
+  const source = String(activity.source ?? '').toLowerCase()
+  const txHash = String(activity.txHash ?? '').toLowerCase()
+
+  return source.includes('balance sync') || source.includes('source not identified') || txHash.startsWith('balance-sync-')
+}
+
+function isIncomingWalletActivity(activity, wallet, option) {
+  return (
+    activityTouchesWallet(activity, wallet, option) &&
+    normalizeAddress(activity.toAddress) === normalizeAddress(wallet.walletAddress)
+  )
+}
+
+function hasMatchingRealActivity(activity, realActivities) {
+  return realActivities.some((realActivity) => (
+    realActivity.chain === activity.chain &&
+    normalizeAddress(realActivity.walletAddress) === normalizeAddress(activity.walletAddress) &&
+    normalizeAddress(realActivity.toAddress) === normalizeAddress(activity.toAddress) &&
+    Number(realActivity.amount) === Number(activity.amount)
+  ))
+}
+
+function withoutReconciledSyntheticActivities(activities) {
+  const realActivities = activities.filter((activity) => !isSyntheticBalanceRecord(activity))
+
+  return activities.filter((activity) => (
+    !isSyntheticBalanceRecord(activity) || !hasMatchingRealActivity(activity, realActivities)
+  ))
+}
 export async function POST() {
   try {
     const supabase = createSupabaseServerClient()
@@ -231,7 +261,8 @@ export async function POST() {
           happenedAt: new Date(Number(blocks[index].timestamp) * 1000).toISOString()
         })))
       } catch (error) {
-        warnings.push(`${option.label}: ${error.message ?? 'activity scan failed'}`)
+        logServerError(`Wallet activity scan ${option.label}`, error)
+        warnings.push(getSafeApiError(error, { chainLabel: option.label, nativeSymbol: option.nativeSymbol, fallback: `Latest ${option.label} activity could not be refreshed. Saved wallet transactions are still shown below.` }))
       }
     }
 
@@ -261,7 +292,7 @@ export async function POST() {
           .filter((payment) => outgoingPaymentTouchesWallet(payment, wallet, option))
           .reduce((total, payment) => total + toUsdcUnits(payment.amount), 0n)
         const storedDirectTotal = storedActivities
-          .filter((activity) => activityTouchesWallet(activity, wallet, option))
+          .filter((activity) => isIncomingWalletActivity(activity, wallet, option))
           .reduce((total, activity) => total + toUsdcUnits(activity.amount), 0n)
         const unrecordedDirectBalance = receivedWalletBalance + outgoingFromReceivedWalletTotal - incomingCheckoutTotal - storedDirectTotal
 
@@ -278,19 +309,20 @@ export async function POST() {
             chain: option.label,
             txHash: `balance-sync-${page.id}-${option.id}-${receivedWalletBalance.toString()}`,
             explorerUrl: getExplorerUrl(option, 'address', wallet.walletAddress),
-            source: 'Received USDC',
+            source: 'Balance update; source not identified',
             blockNumber: null,
             happenedAt: new Date().toISOString()
           })
         }
       } catch (error) {
-        warnings.push(`${option.label}: ${error.message ?? 'balance sync failed'}`)
+        logServerError(`Wallet balance sync ${option.label}`, error)
+        warnings.push(getSafeApiError(error, { chainLabel: option.label, nativeSymbol: option.nativeSymbol, fallback: `Latest ${option.label} balance could not be refreshed. Saved wallet transactions are still shown below.` }))
       }
     }
 
     await upsertWalletActivityRecords(balanceSyncRecords)
 
-    const activities = await listWalletActivityForOwner(user.id, 30)
+    const activities = withoutReconciledSyntheticActivities(await listWalletActivityForOwner(user.id, 30))
 
     return NextResponse.json({
       activities,

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { ARC_TESTNET_CHAIN } from '@/lib/arc'
 import { chainOptions } from '@/lib/chains'
-import { depositCircleWalletUsdcToGateway } from '@/lib/circleWallets'
-import { createPaymentRecord, getPageForOwner, getWalletForPageChain } from '@/lib/store'
+import { GATEWAY_WALLET_EVM_TESTNET, depositCircleWalletUsdcToGateway } from '@/lib/circleWallets'
+import { createPaymentRecord, getPageForOwner, getWalletForPageChain, upsertWalletActivityRecords } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createCircleWalletsUnifiedAdapter, createServerUnifiedBalanceKit } from '@/lib/unifiedBalance'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
@@ -88,7 +88,11 @@ export async function POST(request) {
 
     if (action === 'deposit') {
       if (!validateAmount(amount)) {
-        return NextResponse.json({ error: 'A valid amount is required.' }, { status: 400 })
+        return NextResponse.json({ error: 'Enter a valid USDC amount before depositing to Gateway.' }, { status: 400 })
+      }
+
+      if (source.gatewayDepositSupported === false) {
+        return NextResponse.json({ error: `Gateway deposits are not available on ${source.label} yet.` }, { status: 400 })
       }
 
       if (!sourceWallet?.walletId) {
@@ -101,16 +105,57 @@ export async function POST(request) {
         usdcAddress: source.usdcAddress,
         amount
       })
+      const txHash = getResultHash(result)
+      const explorerUrl = result?.explorerUrl ?? null
+      const recordResults = await Promise.allSettled([
+        createPaymentRecord({
+          pageUsername: page.username,
+          payerAddress: sourceAddress,
+          recipientAddress: GATEWAY_WALLET_EVM_TESTNET,
+          amount,
+          sourceChain: source.label,
+          destinationChain: source.label,
+          txHash,
+          explorerUrl,
+          status: 'confirmed',
+          kind: 'outgoing',
+          note: 'Gateway deposit'
+        }),
+        upsertWalletActivityRecords([{
+          pageId: page.id,
+          ownerId: page.ownerId,
+          pageUsername: page.username,
+          walletAddress: sourceAddress,
+          fromAddress: sourceAddress,
+          toAddress: GATEWAY_WALLET_EVM_TESTNET,
+          amount,
+          asset: 'USDC',
+          chain: source.label,
+          txHash,
+          explorerUrl,
+          source: 'Gateway deposit',
+          blockNumber: result?.blockNumber ?? null
+        }])
+      ])
 
-      return NextResponse.json({ result, source })
+      recordResults.forEach((recordResult, index) => {
+        if (recordResult.status === 'rejected') {
+          logServerError(index === 0 ? 'Gateway deposit payment record' : 'Gateway deposit activity record', recordResult.reason)
+        }
+      })
+
+      return NextResponse.json({ result, source, payment: recordResults[0].status === 'fulfilled' ? recordResults[0].value : null })
     }
 
     if (action === 'send') {
       const kit = createServerUnifiedBalanceKit()
       const adapter = createCircleWalletsUnifiedAdapter()
       const recipientAddress = String(body.recipientAddress ?? '')
-      if (!validateAddress(recipientAddress) || !validateAmount(amount)) {
-        return NextResponse.json({ error: 'Valid recipient and amount are required.' }, { status: 400 })
+      if (!validateAddress(recipientAddress)) {
+        return NextResponse.json({ error: 'Enter a valid recipient address before withdrawing Gateway USDC.' }, { status: 400 })
+      }
+      if (!validateAmount(amount)) {
+        return NextResponse.json({ error: 'Enter a valid USDC amount before withdrawing Gateway USDC.' }, { status: 400 })
       }
 
       const result = await kit.spend({

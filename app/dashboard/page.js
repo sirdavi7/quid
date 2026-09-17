@@ -7,6 +7,7 @@ import { CopyLinkButton } from '@/components/copy-link-button'
 import { DashboardChainWallets } from '@/components/dashboard-chain-wallets'
 import { DashboardReceivedBalance } from '@/components/dashboard-received-balance'
 import { DashboardWalletActivity } from '@/components/dashboard-wallet-activity'
+import { PaymentReceiptButton } from '@/components/payment-receipt-button'
 import { FaucetNavButton, HomeNavButton, OpenPaymentPageNavButton, CreateNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { getPaymentSummaryForOwner, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, updatePaymentExplorerForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -50,6 +51,10 @@ function paymentDirection(payment) {
 
 function paymentDescription(payment) {
   if (payment.kind === 'outgoing') {
+    if (String(payment.note ?? '').toLowerCase().includes('gateway deposit')) {
+      return `From /pay/${payment.pageUsername} to Circle Gateway`
+    }
+
     return `From /pay/${payment.pageUsername} to ${shortAddress(payment.recipientAddress)}`
   }
 
@@ -176,7 +181,11 @@ export default async function DashboardPage() {
   const primaryPage = pages[0]
   const pageWallets = primaryPage ? await listWalletsForPage(primaryPage.id) : []
   const walletActivities = await listWalletActivityForOwner(user.id, 30)
-  const outgoingPayments = payments.filter((payment) => payment.kind === 'outgoing' && payment.status !== 'failed')
+  const outgoingPayments = payments.filter((payment) => (
+    payment.kind === 'outgoing' &&
+    payment.status !== 'failed' &&
+    !String(payment.note ?? '').toLowerCase().includes('gateway deposit')
+  ))
   const outgoingTotal = outgoingPayments.reduce((total, payment) => total + Number(payment.amount), 0)
 
   return (
@@ -357,6 +366,7 @@ export default async function DashboardPage() {
                         <span className="rounded-md bg-mint/20 px-2 py-1 text-xs font-bold uppercase text-ink">
                           {payment.status}
                         </span>
+                        <PaymentReceiptButton payment={payment} explorerUrl={paymentExplorerUrl(payment)} />
                         {paymentExplorerUrl(payment) ? (
                           <a href={paymentExplorerUrl(payment)} target="_blank" rel="noreferrer" className="quid-secondary-action h-8 gap-1 px-2 text-xs">
                             Explorer <ExternalLink size={13} />

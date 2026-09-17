@@ -36,13 +36,18 @@ function isBalanceSync(activity) {
   const source = String(activity.source ?? '').toLowerCase()
   const txHash = String(activity.txHash ?? '').toLowerCase()
 
-  return source.includes('balance sync') || source.includes('unindexed') || txHash.startsWith('balance-sync-')
+  return (
+    source.includes('balance sync') ||
+    source.includes('unindexed') ||
+    source.includes('source not identified') ||
+    txHash.startsWith('balance-sync-')
+  )
 }
 
 function activityType(activity) {
   const source = String(activity.source ?? '').toLowerCase()
 
-  if (source.includes('withdraw') || source.includes('send') || source.includes('payout')) {
+  if (source.includes('gateway deposit') || source.includes('withdraw') || source.includes('send') || source.includes('payout')) {
     return 'Send'
   }
 
@@ -54,15 +59,17 @@ function activitySign(activity) {
 }
 
 function activityStatus(activity) {
-  return 'Confirmed'
+  return isBalanceSync(activity) ? 'Detected' : 'Confirmed'
 }
 
 function formatActivitySource(source) {
   const normalized = String(source ?? '').toLowerCase()
 
   if (normalized.includes('faucet')) return 'Faucet deposit'
-  if (normalized.includes('balance sync') || normalized.includes('unindexed')) return 'Received USDC'
+  if (normalized.includes('gateway deposit')) return 'Gateway deposit'
+  if (normalized.includes('balance sync') || normalized.includes('source not identified')) return 'Balance update'
   if (normalized.includes('withdraw')) return 'Withdrawal'
+  if (normalized.includes('connected')) return 'Connected wallet send'
   if (normalized.includes('send')) return 'Direct send'
   if (normalized.includes('direct')) return 'Direct deposit'
 
@@ -71,16 +78,29 @@ function formatActivitySource(source) {
 
 function activityDescription(activity) {
   const type = activityType(activity)
+  const source = String(activity.source ?? '').toLowerCase()
 
   if (type === 'Send') {
-    return `To ${shortAddress(activity.toAddress)} from received wallet`
+    if (source.includes('gateway deposit')) {
+      return 'From received wallet to Circle Gateway'
+    }
+
+    if (source.includes('connected')) {
+      return `From connected wallet to ${shortAddress(activity.toAddress)}`
+    }
+
+    return `From received wallet to ${shortAddress(activity.toAddress)}`
   }
 
   if (isBalanceSync(activity)) {
-    return `Confirmed to received wallet on ${activity.chain ?? 'supported chain'}`
+    return activity.fromAddress
+      ? `Confirmed from ${shortAddress(activity.fromAddress)} to received wallet`
+      : `Balance updated on ${activity.chain ?? 'supported chain'}; source could not be identified`
   }
 
-  return `From ${shortAddress(activity.fromAddress)} to received wallet`
+  return activity.fromAddress
+    ? `Confirmed from ${shortAddress(activity.fromAddress)} to received wallet`
+    : `Balance received on ${activity.chain ?? 'supported chain'}; source could not be identified`
 }
 
 function friendlyActivityError(message) {
@@ -183,16 +203,18 @@ export function DashboardWalletActivity({ initialActivities = [], walletMocked =
   const receiptRows = receipt ? [
     ['Type', activityType(receipt)],
     ['Amount', formatUsdc(receipt.amount)],
-    ['Received wallet', fullAddress(receipt.toAddress)],
+    ['Sender', receiptIsBalanceSync ? 'Source could not be identified' : fullAddress(receipt.fromAddress)],
+    ['Recipient', fullAddress(receipt.toAddress)],
+    ['Chain', receipt.chain ?? 'Supported chain'],
     ...(receiptIsBalanceSync
       ? [
-          ['Chain', receipt.chain ?? 'Supported chain'],
-          ['Status', 'Confirmed by received wallet balance']
+          ['Source', 'No matching on-chain transfer found'],
+          ['Status', activityStatus(receipt)]
         ]
       : [
-          [activityType(receipt) === 'Send' ? 'Recipient' : 'Sender', fullAddress(activityType(receipt) === 'Send' ? receipt.toAddress : receipt.fromAddress)],
           ['Transaction hash', fullAddress(receipt.txHash)],
-          ['Block number', receipt.blockNumber ?? 'Pending explorer index']
+          ['Block number', receipt.blockNumber ?? 'Pending explorer index'],
+          ['Status', activityStatus(receipt)]
         ]),
     ['Time', formatDate(receipt.happenedAt)]
   ] : []
@@ -366,7 +388,7 @@ export function DashboardWalletActivity({ initialActivities = [], walletMocked =
                     >
                       <ReceiptText size={13} /> Receipt
                     </button>
-                    {activity.explorerUrl ? (
+                    {!isBalanceSync(activity) && activity.explorerUrl ? (
                       <a
                         href={activity.explorerUrl}
                         target="_blank"
@@ -393,7 +415,7 @@ export function DashboardWalletActivity({ initialActivities = [], walletMocked =
         </div>
       ) : null}
 
-      {activities[0]?.explorerUrl ? (
+      {activities[0] && !isBalanceSync(activities[0]) && activities[0].explorerUrl ? (
         <a
           href={activities[0].explorerUrl}
           target="_blank"

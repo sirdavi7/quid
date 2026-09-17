@@ -28,8 +28,11 @@ export async function POST(request) {
     const recipientAddress = String(body.recipientAddress ?? '')
     const amount = String(body.amount ?? '')
 
-    if (!validateAddress(recipientAddress) || !validateAmount(amount)) {
-      return NextResponse.json({ error: 'Valid recipient and amount are required.' }, { status: 400 })
+    if (!validateAddress(recipientAddress)) {
+      return NextResponse.json({ error: 'Enter a valid recipient address before withdrawing USDC.' }, { status: 400 })
+    }
+    if (!validateAmount(amount)) {
+      return NextResponse.json({ error: 'Enter a valid USDC amount before withdrawing.' }, { status: 400 })
     }
 
     const result = await sendArcUsdcFromCircleWallet({
