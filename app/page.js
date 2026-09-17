@@ -47,12 +47,7 @@ export default async function Home() {
     {
       icon: Send,
       title: 'Arc withdrawals',
-      body: 'Move received USDC from the Circle-backed page wallet to your chosen Arc recipient with explorer proof.'
-    },
-    {
-      icon: BadgeDollarSign,
-      title: 'Balance clarity',
-      body: 'Show selected-chain USDC, Arc received balance, checkout totals, withdrawal totals, and Gateway context.'
+      body: 'Move received USDC from the Circle-backed page wallet to your chosen Arc recipient with proof.'
     },
     {
       icon: ShieldCheck,
