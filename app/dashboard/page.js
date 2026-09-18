@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { AppHeader } from '@/components/app-header'
 import { AppFooterStrip } from '@/components/app-footer-strip'
 import { redirect } from 'next/navigation'
-import { Activity, Clock3, Droplets, ExternalLink, Plus, ReceiptText, Settings, WalletCards } from 'lucide-react'
+import { Clock3, Droplets, ExternalLink, Plus, ReceiptText, Settings, WalletCards } from 'lucide-react'
 import { CopyLinkButton } from '@/components/copy-link-button'
 import { DashboardChainWallets } from '@/components/dashboard-chain-wallets'
 import { DashboardReceivedBalance } from '@/components/dashboard-received-balance'
@@ -24,9 +24,9 @@ function formatUsdc(value) {
   })} USDC`
 }
 
-function formatDate(value) {
+function formatDate(value, emptyLabel = 'No payments yet') {
   if (!value) {
-    return 'No payments yet'
+    return emptyLabel
   }
 
   return new Intl.DateTimeFormat('en', {
@@ -212,7 +212,7 @@ export default async function DashboardPage() {
           ) : null}
         </div>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {primaryPage ? (
             <DashboardReceivedBalance
               walletAddress={primaryPage.walletAddress}
@@ -229,14 +229,6 @@ export default async function DashboardPage() {
           </div>
           <div className="rounded-lg border border-arc/20 bg-white p-5 shadow-panel">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-bold uppercase text-ink/50">Checkout records</p>
-              <Activity size={18} className="text-arc" />
-            </div>
-            <p className="mt-4 text-3xl font-black text-ink">{summary.paymentCount}</p>
-            <p className="mt-2 text-sm text-ink/55">Number of Quid checkout submissions.</p>
-          </div>
-          <div className="rounded-lg border border-arc/20 bg-white p-5 shadow-panel">
-            <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-bold uppercase text-ink/50">Withdrawn USDC</p>
               <ExternalLink size={18} className="text-arc" />
             </div>
@@ -245,11 +237,11 @@ export default async function DashboardPage() {
           </div>
           <div className="rounded-lg border border-arc/20 bg-white p-5 shadow-panel">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-bold uppercase text-ink/50">Latest checkout</p>
+              <p className="text-sm font-bold uppercase text-ink/50">Recent activity</p>
               <Clock3 size={18} className="text-arc" />
             </div>
-            <p className="mt-4 text-2xl font-black text-ink">{formatDate(summary.latestPaymentAt)}</p>
-            <p className="mt-2 text-sm text-ink/55">Most recent Quid checkout record.</p>
+            <p className="mt-4 text-2xl font-black text-ink">{formatDate(summary.recentActivityAt, 'No activity yet')}</p>
+            <p className="mt-2 text-sm text-ink/55">Most recent meaningful Quid activity.</p>
           </div>
         </div>
 

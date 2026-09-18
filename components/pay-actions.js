@@ -168,49 +168,64 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     return `${value.slice(0, 6)}...${value.slice(-4)}`
   }
 
-  async function recordSubmittedPayment({ selected, result }) {
-    const response = await fetch('/api/payments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        pageUsername: page.username,
-        payerAddress: address,
-        amount: payForm.amount,
-        sourceChain: selected.label,
-        explorerUrl: result?.explorerUrl,
-        txHash: result?.transactionHash ?? result?.hash,
-        note: `Paid ${page.name}`
-      })
-    })
+  async function savePaymentRecord(record, fallbackMessage) {
+    let lastError = null
 
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}))
-      throw new Error(payload.error ?? 'Payment submitted, but Quid could not save the receipt yet.')
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const response = await fetch('/api/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(record)
+        })
+        const payload = await response.json().catch(() => ({}))
+
+        if (response.ok) {
+          return payload.payment
+        }
+
+        lastError = new Error(payload.error ?? fallbackMessage)
+
+        if (response.status !== 429 && response.status < 500) {
+          break
+        }
+      } catch (error) {
+        lastError = error
+      }
+
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)))
+      }
     }
+
+    throw lastError ?? new Error(fallbackMessage)
+  }
+
+  async function recordSubmittedPayment({ selected, result }) {
+    await savePaymentRecord({
+      pageUsername: page.username,
+      payerAddress: address,
+      amount: payForm.amount,
+      sourceChain: selected.label,
+      explorerUrl: result?.explorerUrl,
+      txHash: result?.transactionHash ?? result?.hash,
+      note: `Paid ${page.name}`
+    }, 'Payment submitted, but Quid could not save the receipt yet.')
   }
 
   async function recordOutgoingConnectedWalletSend({ hash }) {
-    const response = await fetch('/api/payments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        pageUsername: page.username,
-        payerAddress: address,
-        recipientAddress: sendForm.recipient,
-        amount: sendForm.amount,
-        sourceChain: 'Arc Testnet',
-        destinationChain: 'Arc Testnet',
-        explorerUrl: `https://testnet.arcscan.app/tx/${hash}`,
-        txHash: hash,
-        kind: 'outgoing',
-        note: 'Connected wallet send'
-      })
-    })
-
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}))
-      throw new Error(payload.error ?? 'Transfer submitted, but Quid could not save the record yet.')
-    }
+    await savePaymentRecord({
+      pageUsername: page.username,
+      payerAddress: address,
+      recipientAddress: sendForm.recipient,
+      amount: sendForm.amount,
+      sourceChain: 'Arc Testnet',
+      destinationChain: 'Arc Testnet',
+      explorerUrl: `https://testnet.arcscan.app/tx/${hash}`,
+      txHash: hash,
+      kind: 'outgoing',
+      note: 'Connected wallet send'
+    }, 'Transfer submitted, but Quid could not save the record yet.')
   }
 
   async function waitForArcTransferReceipt(hash) {
