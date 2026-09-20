@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { CheckCircle2, Copy, Loader2, RefreshCw, WalletCards } from 'lucide-react'
 import { chainOptions } from '@/lib/chains'
 import { getFriendlyUserError } from '@/lib/user-errors'
+import { UsdcMark } from '@/components/usdc-mark'
 
 function shortAddress(address) {
   if (!address) return 'Not set up'
@@ -17,7 +18,7 @@ function formatBalance(value) {
 
   return `${Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 6
+    maximumFractionDigits: 2
   })} USDC`
 }
 
@@ -190,12 +191,12 @@ export function DashboardChainWallets({ initialWallets = [], page = null, wallet
                     <p className="font-black text-ink">{chain.label}</p>
                     <p className="mt-1 font-mono text-xs text-ink/55">{shortAddress(wallet?.walletAddress)}</p>
                     {wallet?.walletAddress ? (
-                      <p className="mt-2 text-sm font-black text-ink">
+                      <p className="mt-2 flex items-center gap-1.5 text-sm font-black text-ink">
                         {balanceStatus === 'loading' && !balance
                           ? 'Checking...'
                           : balance?.error
                           ? balance.error
-                            : formatBalance(balance?.balance)}
+                            : <><UsdcMark />{formatBalance(balance?.balance)}</>}
                       </p>
                     ) : null}
                   </div>

@@ -18,6 +18,7 @@ import {
 import { ARC_TESTNET_CHAIN, ARC_TESTNET_ID, ARC_USDC_ADDRESS, usdcAbi } from '@/lib/arc'
 import { chainOptions } from '@/lib/chains'
 import { getFriendlyUserError } from '@/lib/user-errors'
+import { UsdcAmountInput, UsdcMark } from '@/components/usdc-mark'
 
 const WalletConnectButton = dynamic(() => import('./wallet-connect-button'), {
   ssr: false,
@@ -368,9 +369,12 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-bold text-ink/50">Connected wallet</p>
-            <p className="mt-1 text-sm text-ink/70">
-              {selectedSource.label} USDC balance:{' '}
-              {!isConnected ? 'Connect wallet' : sourceUsdcBalance === undefined ? 'Checking...' : `${formatUnits(sourceUsdcBalance, 6)} USDC`}
+            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-ink/70">
+              <span>{selectedSource.label} balance:</span>
+              <UsdcMark />
+              <span>
+                {!isConnected ? 'Connect wallet' : sourceUsdcBalance === undefined ? 'Checking...' : `${Number(formatUnits(sourceUsdcBalance, 6)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC`}
+              </span>
             </p>
             {isConnected && sourceNativeBalance ? (
               <p className="mt-1 text-xs font-semibold text-ink/45">
@@ -379,7 +383,8 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
                 ) : (
                   <>
                     Gas token: {Number(sourceNativeBalance.formatted).toLocaleString(undefined, {
-                      maximumFractionDigits: 6
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
                     })}{' '}
                     {sourceNativeBalance.symbol || selectedSource.nativeSymbol}
                   </>
@@ -407,7 +412,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="grid gap-2">
             <span className="text-sm font-bold text-ink">Amount</span>
-            <input
+            <UsdcAmountInput
               value={payForm.amount}
               onChange={(event) => setPayForm((current) => ({ ...current, amount: event.target.value }))}
               className="h-11 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
@@ -460,10 +465,10 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
             </label>
             <label className="grid gap-2">
               <span className="text-sm font-bold text-ink">Amount</span>
-              <input
-                value={sendForm.amount}
-                onChange={(event) => setSendForm((current) => ({ ...current, amount: event.target.value }))}
-                className="h-11 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+            <UsdcAmountInput
+              value={sendForm.amount}
+              onChange={(event) => setSendForm((current) => ({ ...current, amount: event.target.value }))}
+              className="h-11 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
                 inputMode="decimal"
               />
             </label>

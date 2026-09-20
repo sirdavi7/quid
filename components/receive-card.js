@@ -3,6 +3,7 @@
 import QRCode from 'qrcode'
 import { Copy, QrCode, WalletCards } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { UsdcAmountInput } from '@/components/usdc-mark'
 
 function shortAddress(address) {
   if (!address) return ''
@@ -89,7 +90,7 @@ export function ReceiveCard({ page }) {
 
           <label className="grid gap-2 rounded-md border border-ink/10 bg-paper p-4">
             <span className="text-xs font-black uppercase text-ink/45">QR amount</span>
-            <input
+            <UsdcAmountInput
               value={qrAmount}
               onChange={(event) => setQrAmount(event.target.value)}
               className="h-10 rounded-md border border-ink/15 bg-white px-3 outline-none focus:border-arc"

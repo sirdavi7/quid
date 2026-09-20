@@ -3,6 +3,7 @@ import { createQuidWalletForChain } from '@/lib/circleWallets'
 import { chainOptions } from '@/lib/chains'
 import { getPageForOwner, listWalletsForPage, upsertPageWalletRecords } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getOnchainActionBlockMessage } from '@/lib/runtime-network'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
 function toWalletRecord(page, wallet) {
@@ -65,6 +66,12 @@ export async function GET() {
 }
 
 export async function POST() {
+  const networkBlockMessage = getOnchainActionBlockMessage()
+
+  if (networkBlockMessage) {
+    return NextResponse.json({ error: networkBlockMessage }, { status: 503 })
+  }
+
   try {
     const supabase = createSupabaseServerClient()
     const { data } = await supabase.auth.getUser()

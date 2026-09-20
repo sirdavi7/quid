@@ -2,10 +2,17 @@ import { NextResponse } from 'next/server'
 import { sendArcUsdcFromCircleWallet } from '@/lib/circleWallets'
 import { createPaymentRecord, getPageForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getOnchainActionBlockMessage } from '@/lib/runtime-network'
 import { validateAddress, validateAmount } from '@/lib/validation'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
 export async function POST(request) {
+  const networkBlockMessage = getOnchainActionBlockMessage()
+
+  if (networkBlockMessage) {
+    return NextResponse.json({ error: networkBlockMessage }, { status: 503 })
+  }
+
   try {
     const supabase = createSupabaseServerClient()
     const { data } = await supabase.auth.getUser()

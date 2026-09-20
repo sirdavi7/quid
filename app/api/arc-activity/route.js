@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createPublicClient, formatUnits, http, parseAbiItem, parseUnits } from 'viem'
-import { arcTestnet, ARC_EXPLORER_URL, ARC_TESTNET_ID, usdcAbi } from '@/lib/arc'
+import { createPublicClient, formatUnits, http, parseAbiItem } from 'viem'
+import { arcTestnet, ARC_EXPLORER_URL, ARC_TESTNET_ID } from '@/lib/arc'
 import { chains, chainOptions } from '@/lib/chains'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
@@ -81,27 +81,6 @@ function sourceLabel(fromAddress) {
   return String(fromAddress ?? '').toLowerCase() === zeroAddress ? 'Faucet deposit' : 'Direct deposit'
 }
 
-function toUsdcUnits(value) {
-  try {
-    return parseUnits(String(value ?? 0), 6)
-  } catch {
-    return 0n
-  }
-}
-
-async function getReceivedWalletBalance({ chainClient, option, walletAddress }) {
-  return chainClient.readContract({
-    address: option.usdcAddress,
-    abi: usdcAbi,
-    functionName: 'balanceOf',
-    args: [walletAddress]
-  })
-}
-
-function normalizeAddress(address) {
-  return String(address ?? '').toLowerCase()
-}
-
 function fallbackArcWallet(page) {
   if (!page?.walletAddress) {
     return null
@@ -140,26 +119,6 @@ function paymentTxHash(payment) {
   return payment.txHash || payment.explorerUrl?.split('/tx/')[1]
 }
 
-function incomingPaymentTouchesChain(payment, option) {
-  if (payment.kind === 'outgoing') {
-    return false
-  }
-
-  return (payment.destinationChain ?? 'Arc Testnet') === option.label
-}
-
-function outgoingPaymentTouchesWallet(payment, wallet, option) {
-  return (
-    payment.kind === 'outgoing' &&
-    payment.sourceChain === option.label &&
-    normalizeAddress(payment.payerAddress) === normalizeAddress(wallet.walletAddress)
-  )
-}
-
-function activityTouchesWallet(activity, wallet, option) {
-  return activity.chain === option.label && normalizeAddress(activity.walletAddress) === normalizeAddress(wallet.walletAddress)
-}
-
 function isSyntheticBalanceRecord(activity) {
   const source = String(activity.source ?? '').toLowerCase()
   const txHash = String(activity.txHash ?? '').toLowerCase()
@@ -167,29 +126,6 @@ function isSyntheticBalanceRecord(activity) {
   return source.includes('balance sync') || source.includes('source not identified') || txHash.startsWith('balance-sync-')
 }
 
-function isIncomingWalletActivity(activity, wallet, option) {
-  return (
-    activityTouchesWallet(activity, wallet, option) &&
-    normalizeAddress(activity.toAddress) === normalizeAddress(wallet.walletAddress)
-  )
-}
-
-function hasMatchingRealActivity(activity, realActivities) {
-  return realActivities.some((realActivity) => (
-    realActivity.chain === activity.chain &&
-    normalizeAddress(realActivity.walletAddress) === normalizeAddress(activity.walletAddress) &&
-    normalizeAddress(realActivity.toAddress) === normalizeAddress(activity.toAddress) &&
-    Number(realActivity.amount) === Number(activity.amount)
-  ))
-}
-
-function withoutReconciledSyntheticActivities(activities) {
-  const realActivities = activities.filter((activity) => !isSyntheticBalanceRecord(activity))
-
-  return activities.filter((activity) => (
-    !isSyntheticBalanceRecord(activity) || !hasMatchingRealActivity(activity, realActivities)
-  ))
-}
 export async function POST() {
   try {
     const supabase = createSupabaseServerClient()
@@ -268,65 +204,14 @@ export async function POST() {
 
     await upsertWalletActivityRecords(records)
 
-    const storedActivities = await listWalletActivityForOwner(user.id, 200)
-    const balanceSyncRecords = []
-
-    for (const wallet of wallets) {
-      const option = chainOptions.find((item) => item.id === wallet.chainId)
-
-      if (!option?.usdcAddress || !wallet.walletAddress) {
-        continue
-      }
-
-      try {
-        const chainClient = createChainClient(option)
-        const receivedWalletBalance = await getReceivedWalletBalance({
-          chainClient,
-          option,
-          walletAddress: wallet.walletAddress
-        })
-        const incomingCheckoutTotal = payments
-          .filter((payment) => incomingPaymentTouchesChain(payment, option))
-          .reduce((total, payment) => total + toUsdcUnits(payment.amount), 0n)
-        const outgoingFromReceivedWalletTotal = payments
-          .filter((payment) => outgoingPaymentTouchesWallet(payment, wallet, option))
-          .reduce((total, payment) => total + toUsdcUnits(payment.amount), 0n)
-        const storedDirectTotal = storedActivities
-          .filter((activity) => isIncomingWalletActivity(activity, wallet, option))
-          .reduce((total, activity) => total + toUsdcUnits(activity.amount), 0n)
-        const unrecordedDirectBalance = receivedWalletBalance + outgoingFromReceivedWalletTotal - incomingCheckoutTotal - storedDirectTotal
-
-        if (unrecordedDirectBalance > 0n) {
-          balanceSyncRecords.push({
-            pageId: page.id,
-            ownerId: page.ownerId,
-            pageUsername: page.username,
-            walletAddress: wallet.walletAddress,
-            fromAddress: null,
-            toAddress: wallet.walletAddress,
-            amount: formatUnits(unrecordedDirectBalance, 6),
-            asset: 'USDC',
-            chain: option.label,
-            txHash: `balance-sync-${page.id}-${option.id}-${receivedWalletBalance.toString()}`,
-            explorerUrl: getExplorerUrl(option, 'address', wallet.walletAddress),
-            source: 'Balance update; source not identified',
-            blockNumber: null,
-            happenedAt: new Date().toISOString()
-          })
-        }
-      } catch (error) {
-        logServerError(`Wallet balance sync ${option.label}`, error)
-        warnings.push(getSafeApiError(error, { chainLabel: option.label, nativeSymbol: option.nativeSymbol, fallback: `Latest ${option.label} balance could not be refreshed. Saved wallet transactions are still shown below.` }))
-      }
-    }
-
-    await upsertWalletActivityRecords(balanceSyncRecords)
-
-    const activities = withoutReconciledSyntheticActivities(await listWalletActivityForOwner(user.id, 30))
+    // A wallet balance delta is not proof of a transaction's sender or route.
+    // Show only indexed transfers and Quid-recorded operations in activity.
+    const activities = (await listWalletActivityForOwner(user.id, 30))
+      .filter((activity) => !isSyntheticBalanceRecord(activity))
 
     return NextResponse.json({
       activities,
-      synced: records.length + balanceSyncRecords.length,
+      synced: records.length,
       warning: warnings.length ? warnings.join('; ') : null
     })
   } catch (error) {

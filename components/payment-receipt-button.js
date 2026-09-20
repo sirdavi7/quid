@@ -6,7 +6,7 @@ import { ExternalLink, ReceiptText, X } from 'lucide-react'
 function formatUsdc(value) {
   return Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 6
+    maximumFractionDigits: 2
   }) + ' USDC'
 }
 

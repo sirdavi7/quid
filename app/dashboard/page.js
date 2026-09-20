@@ -8,6 +8,7 @@ import { DashboardChainWallets } from '@/components/dashboard-chain-wallets'
 import { DashboardReceivedBalance } from '@/components/dashboard-received-balance'
 import { DashboardWalletActivity } from '@/components/dashboard-wallet-activity'
 import { PaymentReceiptButton } from '@/components/payment-receipt-button'
+import { UsdcMark } from '@/components/usdc-mark'
 import { FaucetNavButton, HomeNavButton, OpenPaymentPageNavButton, CreateNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { getPaymentSummaryForOwner, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, updatePaymentExplorerForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -20,7 +21,7 @@ export const metadata = {
 function formatUsdc(value) {
   return `${Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 6
+    maximumFractionDigits: 2
   })} USDC`
 }
 
@@ -224,7 +225,7 @@ export default async function DashboardPage() {
               <p className="text-sm font-bold uppercase text-ink/50">Checkout USDC</p>
               <ReceiptText size={18} className="text-arc" />
             </div>
-            <p className="mt-4 text-3xl font-black text-ink">{formatUsdc(summary.totalReceived)}</p>
+            <p className="mt-4 flex items-center gap-2 text-3xl font-black text-ink"><UsdcMark className="h-7 w-7" />{formatUsdc(summary.totalReceived)}</p>
             <p className="mt-2 text-sm text-ink/55">Total submitted through Quid checkout.</p>
           </div>
           <div className="rounded-lg border border-arc/20 bg-white p-5 shadow-panel">
@@ -232,7 +233,7 @@ export default async function DashboardPage() {
               <p className="text-sm font-bold uppercase text-ink/50">Withdrawn USDC</p>
               <ExternalLink size={18} className="text-arc" />
             </div>
-            <p className="mt-4 text-3xl font-black text-ink">{formatUsdc(outgoingTotal)}</p>
+            <p className="mt-4 flex items-center gap-2 text-3xl font-black text-ink"><UsdcMark className="h-7 w-7" />{formatUsdc(outgoingTotal)}</p>
             <p className="mt-2 text-sm text-ink/55">USDC sent out from Quid owner tools.</p>
           </div>
           <div className="rounded-lg border border-arc/20 bg-white p-5 shadow-panel">

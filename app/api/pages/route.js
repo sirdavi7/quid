@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createQuidWallets } from '@/lib/circleWallets'
 import { createPage, getPageForOwner, upsertPageWalletRecords } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getOnchainActionBlockMessage } from '@/lib/runtime-network'
 import { normalizeUsername, validateUsername } from '@/lib/validation'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
@@ -10,6 +11,12 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const networkBlockMessage = getOnchainActionBlockMessage()
+
+  if (networkBlockMessage) {
+    return NextResponse.json({ error: networkBlockMessage }, { status: 503 })
+  }
+
   try {
     const supabase = createSupabaseServerClient()
     const { data } = await supabase.auth.getUser()

@@ -87,20 +87,47 @@ export default async function Home() {
         <FaucetNavButton />
       </AppHeader>
 
-      <section className="mx-auto max-w-6xl px-4 pb-12 pt-16 sm:px-5 sm:pt-20 lg:pt-24">
-        <div className="max-w-4xl">
-          <p className="mb-5 inline-flex max-w-full rounded-md border border-arc/20 bg-haze px-3 py-2 text-sm font-bold leading-5 text-arc">
-            Arc Testnet, Circle Wallets, Gateway
-          </p>
-          <h1 className="text-4xl font-black leading-[1.04] text-ink sm:text-5xl lg:text-6xl">
-            Your USDC payment workspace.
-          </h1>
-          <p className="mt-5 max-w-3xl text-lg leading-8 text-ink/70 lg:text-xl">
-            Quid gives you one public pay page, connected-wallet checkout, QR scan and pay, readable receipts, and owner controls for received USDC.
-          </p>
+      <section className="mx-auto max-w-6xl px-4 pb-12 pt-12 sm:px-5 sm:pt-16 lg:pt-20">
+        <div className="grid items-center gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:gap-12">
+          <div>
+            <p className="mb-5 inline-flex max-w-full rounded-md border border-arc/20 bg-haze px-3 py-2 text-sm font-bold leading-5 text-arc">
+              Arc Testnet, Circle Wallets, Gateway
+            </p>
+            <h1 className="text-4xl font-black leading-[1.04] text-ink sm:text-5xl lg:text-6xl">
+              Your USDC payment workspace.
+            </h1>
+            <p className="mt-5 max-w-xl text-lg leading-8 text-ink/70">
+              Quid gives you one public pay page, connected-wallet checkout, QR scan and pay, readable receipts, and owner controls for received USDC.
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href={user ? '/dashboard' : '/create'}
+                className="quid-primary-action h-12 w-full px-5 sm:w-auto"
+              >
+                {user ? 'Go to Dashboard' : 'Create your Quid page'} <ArrowRight size={18} />
+              </Link>
+              <Link
+                href={user ? paymentPageHref : '/create'}
+                className="quid-secondary-action h-12 w-full px-5 sm:w-auto"
+              >
+                {user ? 'Open payment page' : 'Create pay link'}
+              </Link>
+              <a
+                href="https://faucet.circle.com"
+                target="_blank"
+                rel="noreferrer"
+                className="quid-secondary-action h-12 w-full px-5 sm:w-auto"
+              >
+                Get test USDC
+              </a>
+            </div>
+          </div>
+
+          <HomeShowcase />
         </div>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             ['01', 'Create a pay page'],
             ['02', 'Receive by link or QR'],
@@ -114,32 +141,6 @@ export default async function Home() {
           ))}
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link
-            href={user ? '/dashboard' : '/create'}
-            className="quid-primary-action h-12 w-full px-5 sm:w-auto"
-          >
-            {user ? 'Go to Dashboard' : 'Create your Quid page'} <ArrowRight size={18} />
-          </Link>
-          <Link
-            href={user ? paymentPageHref : '/create'}
-            className="quid-secondary-action h-12 w-full px-5 sm:w-auto"
-          >
-            {user ? 'Open payment page' : 'Create pay link'}
-          </Link>
-          <a
-            href="https://faucet.circle.com"
-            target="_blank"
-            rel="noreferrer"
-            className="quid-secondary-action h-12 w-full px-5 sm:w-auto"
-          >
-            Get test USDC
-          </a>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-5">
-        <HomeShowcase />
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-4 px-5 pt-8 pb-16 md:grid-cols-3 lg:pt-10">

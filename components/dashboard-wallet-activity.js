@@ -8,7 +8,7 @@ import { chainOptions } from '@/lib/chains'
 function formatUsdc(value) {
   return `${Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 6
+    maximumFractionDigits: 2
   })} USDC`
 }
 
@@ -67,6 +67,7 @@ function formatActivitySource(source) {
 
   if (normalized.includes('faucet')) return 'Faucet deposit'
   if (normalized.includes('gateway deposit')) return 'Gateway deposit'
+  if (normalized.includes('gateway withdrawal')) return 'Gateway withdrawal'
   if (normalized.includes('balance sync') || normalized.includes('source not identified')) return 'Balance update'
   if (normalized.includes('withdraw')) return 'Withdrawal'
   if (normalized.includes('connected')) return 'Connected wallet send'
@@ -83,6 +84,10 @@ function activityDescription(activity) {
   if (type === 'Send') {
     if (source.includes('gateway deposit')) {
       return 'From received wallet to Circle Gateway'
+    }
+
+    if (source.includes('gateway withdrawal')) {
+      return `Gateway withdrawal to ${shortAddress(activity.toAddress)}`
     }
 
     if (source.includes('connected')) {
@@ -123,7 +128,7 @@ function explorerLabel(activity) {
 }
 
 export function DashboardWalletActivity({ initialActivities = [], walletMocked = false }) {
-  const [activities, setActivities] = useState(initialActivities)
+  const [activities, setActivities] = useState(() => initialActivities.filter((activity) => !isBalanceSync(activity)))
   const [status, setStatus] = useState(walletMocked ? 'mocked' : 'idle')
   const [error, setError] = useState('')
   const [typeFilter, setTypeFilter] = useState('All types')
@@ -153,7 +158,7 @@ export function DashboardWalletActivity({ initialActivities = [], walletMocked =
         throw new Error(payload.error ?? 'Wallet activity request failed.')
       }
 
-      setActivities(payload.activities ?? [])
+      setActivities((payload.activities ?? []).filter((activity) => !isBalanceSync(activity)))
       setStatus('ready')
     } catch (err) {
       setError((activities.length || initialActivities.length) ? '' : friendlyActivityError(err.message))

@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server'
-import { ARC_TESTNET_CHAIN } from '@/lib/arc'
+import { createPublicClient, decodeEventLog, http, parseAbiItem } from 'viem'
+import { ARC_EXPLORER_URL, ARC_TESTNET_CHAIN, ARC_USDC_ADDRESS, arcTestnet } from '@/lib/arc'
 import { chainOptions } from '@/lib/chains'
 import { GATEWAY_WALLET_EVM_TESTNET, depositCircleWalletUsdcToGateway } from '@/lib/circleWallets'
 import { createPaymentRecord, getPageForOwner, getWalletForPageChain, upsertWalletActivityRecords } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createCircleWalletsUnifiedAdapter, createServerUnifiedBalanceKit } from '@/lib/unifiedBalance'
+import { getOnchainActionBlockMessage } from '@/lib/runtime-network'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
 import { validateAddress, validateAmount } from '@/lib/validation'
+
+const arcClient = createPublicClient({
+  chain: arcTestnet,
+  transport: http(arcTestnet.rpcUrls.default.http[0])
+})
+const transferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 
 function getSourceChain(chainId) {
   return chainOptions.find((option) => option.id === Number(chainId)) ?? chainOptions[0]
@@ -14,6 +22,53 @@ function getSourceChain(chainId) {
 
 function getResultHash(result) {
   return result?.txHash ?? result?.transactionHash ?? result?.hash ?? result?.transferId
+}
+
+function normalizeAddress(address) {
+  return String(address ?? '').toLowerCase()
+}
+
+async function getGatewayWithdrawalTransfer(txHash, recipientAddress) {
+  if (!String(txHash ?? '').startsWith('0x')) {
+    return null
+  }
+
+  try {
+    const receipt = await arcClient.getTransactionReceipt({ hash: txHash })
+    const transfer = receipt.logs
+      .filter((log) => normalizeAddress(log.address) === normalizeAddress(ARC_USDC_ADDRESS))
+      .map((log) => {
+        try {
+          return decodeEventLog({
+            abi: [transferEvent],
+            data: log.data,
+            topics: log.topics
+          })
+        } catch {
+          return null
+        }
+      })
+      .find((event) => (
+        event?.eventName === 'Transfer' &&
+        normalizeAddress(event.args.to) === normalizeAddress(recipientAddress)
+      ))
+
+    if (!transfer) {
+      return null
+    }
+
+    const block = await arcClient.getBlock({ blockNumber: receipt.blockNumber })
+
+    return {
+      fromAddress: transfer.args.from,
+      toAddress: transfer.args.to,
+      blockNumber: receipt.blockNumber.toString(),
+      happenedAt: new Date(Number(block.timestamp) * 1000).toISOString()
+    }
+  } catch (error) {
+    logServerError('Gateway withdrawal transaction lookup', error)
+    return null
+  }
 }
 
 function isRetryableRpcError(error) {
@@ -49,6 +104,12 @@ async function withRpcRetry(operation) {
 }
 
 export async function POST(request) {
+  const networkBlockMessage = getOnchainActionBlockMessage()
+
+  if (networkBlockMessage) {
+    return NextResponse.json({ error: networkBlockMessage }, { status: 503 })
+  }
+
   let body = {}
 
   try {
@@ -173,19 +234,44 @@ export async function POST(request) {
       })
 
       const txHash = getResultHash(result)
-      await createPaymentRecord({
-        pageUsername: page.username,
-        payerAddress: sourceAddress,
-        recipientAddress,
-        amount,
-        sourceChain: source.label,
-        destinationChain: 'Arc Testnet',
-        txHash,
-        explorerUrl: result?.explorerUrl ?? null,
-        status: 'submitted',
-        kind: 'outgoing',
-        note: 'Gateway withdrawal'
-      })
+      if (!String(txHash ?? '').startsWith('0x')) {
+        throw new Error('Circle did not return the Arc transaction hash for this Gateway withdrawal.')
+      }
+
+      const explorerUrl = result?.explorerUrl ?? `${ARC_EXPLORER_URL}/tx/${txHash}`
+      const transfer = await getGatewayWithdrawalTransfer(txHash, recipientAddress)
+
+      await Promise.all([
+        createPaymentRecord({
+          pageUsername: page.username,
+          payerAddress: sourceAddress,
+          recipientAddress,
+          amount,
+          sourceChain: source.label,
+          destinationChain: 'Arc Testnet',
+          txHash,
+          explorerUrl,
+          status: 'confirmed',
+          kind: 'outgoing',
+          note: 'Gateway withdrawal'
+        }),
+        upsertWalletActivityRecords([{
+          pageId: page.id,
+          ownerId: page.ownerId,
+          pageUsername: page.username,
+          walletAddress: sourceAddress,
+          fromAddress: transfer?.fromAddress ?? null,
+          toAddress: transfer?.toAddress ?? recipientAddress,
+          amount,
+          asset: 'USDC',
+          chain: 'Arc Testnet',
+          txHash,
+          explorerUrl,
+          source: `Gateway withdrawal from ${source.label}`,
+          blockNumber: transfer?.blockNumber ?? result?.blockNumber ?? null,
+          happenedAt: transfer?.happenedAt
+        }])
+      ])
 
       return NextResponse.json({ result, source })
     }

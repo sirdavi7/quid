@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Loader2, RefreshCw, WalletCards } from 'lucide-react'
+import { UsdcMark } from '@/components/usdc-mark'
 
 function formatBalance(value) {
   if (value === null || value === undefined) {
@@ -10,7 +11,7 @@ function formatBalance(value) {
 
   return `${Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 6
+    maximumFractionDigits: 2
   })} USDC`
 }
 
@@ -73,8 +74,8 @@ export function DashboardReceivedBalance({ walletAddress, walletMocked = false }
         <p className="text-sm font-bold uppercase text-ink/50">Arc received balance</p>
         <WalletCards size={18} className="text-arc" />
       </div>
-      <p className="mt-4 text-3xl font-black text-ink">
-        {status === 'loading' ? 'Checking...' : formatBalance(balance)}
+      <p className="mt-4 flex items-center gap-2 text-3xl font-black text-ink">
+        {status === 'loading' ? 'Checking...' : <><UsdcMark className="h-7 w-7" />{formatBalance(balance)}</>}
       </p>
       <p className="mt-2 text-sm text-ink/55">
         Live Arc Testnet USDC in your default Quid receive wallet.
