@@ -23,7 +23,7 @@ function formatBalance(value) {
 function friendlyPanelError(error, options) {
   return getFriendlyUserError(error, options)
 }
-function GatewayBalanceSummary({ result }) {
+function GatewayBalanceSummary({ result, gatewayWallet }) {
   if (!result) {
     return null
   }
@@ -38,7 +38,7 @@ function GatewayBalanceSummary({ result }) {
     <div className="mt-4 rounded-md border border-arc/20 bg-haze p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase text-arc">Gateway cross-chain balance</p>
+          <p className="text-xs font-bold uppercase text-arc">Unified Gateway balance</p>
           <p className="mt-1 flex items-center gap-2 text-3xl font-black text-ink"><UsdcMark className="h-7 w-7" />{formatBalance(total)} USDC</p>
         </div>
         <div className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-xs font-bold text-ink/60">
@@ -55,8 +55,9 @@ function GatewayBalanceSummary({ result }) {
         ))}
       </div>
 
+      <p className="mt-3 break-all font-mono text-xs text-ink/55">Quid Gateway wallet: {gatewayWallet?.walletAddress}</p>
       <p className="mt-3 text-xs leading-5 text-ink/55">
-        Gateway reports all supported EVM chains. Deposit controls appear only for chains with a Quid-managed receive wallet.
+        This is one Gateway balance for this Quid page. It stays the same while you switch between receive wallets.
       </p>
 
       {!chainsWithBalance.length ? (
@@ -64,6 +65,39 @@ function GatewayBalanceSummary({ result }) {
           Gateway is separate from your received Arc wallet funds. It only shows USDC that has been moved into Circle Gateway for cross-chain spending.
         </p>
       ) : null}
+    </div>
+  )
+}
+
+function LegacyGatewayBalanceSummary({ items }) {
+  const balances = (items ?? []).filter((item) => {
+    const depositor = Array.isArray(item.balances?.breakdown) ? item.balances.breakdown[0] : null
+    const total = item.balances?.totalConfirmedBalance ?? depositor?.totalConfirmed ?? '0'
+    return Number(total) > 0
+  })
+
+  if (!balances.length) {
+    return null
+  }
+
+  return (
+    <div className="mt-4 rounded-md border border-ink/10 bg-white p-4">
+      <p className="text-xs font-bold uppercase text-ink/50">Legacy Gateway balances</p>
+      <p className="mt-1 text-sm leading-6 text-ink/60">These were deposited before Quid had one Gateway identity. They remain separate until you deliberately consolidate them.</p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {balances.map((item) => {
+          const depositor = Array.isArray(item.balances?.breakdown) ? item.balances.breakdown[0] : null
+          const total = item.balances?.totalConfirmedBalance ?? depositor?.totalConfirmed ?? '0'
+
+          return (
+            <div key={item.walletAddress} className="rounded-md border border-ink/10 bg-haze p-3">
+              <p className="font-black text-ink">{item.chainLabels.join(', ')}</p>
+              <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-ink/65"><UsdcMark />{formatBalance(total)} USDC</p>
+              <p className="mt-2 break-all font-mono text-xs text-ink/50">{item.walletAddress}</p>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -96,6 +130,8 @@ export function CreatorWalletPanel({ page }) {
   const [wallets, setWallets] = useState(page.wallets ?? [])
   const [receivedBalance, setReceivedBalance] = useState(null)
   const [gatewayBalance, setGatewayBalance] = useState(null)
+  const [gatewayWallet, setGatewayWallet] = useState(page.gatewayWallet ?? null)
+  const [legacyGatewayBalances, setLegacyGatewayBalances] = useState([])
   const [sendResult, setSendResult] = useState('')
   const [error, setError] = useState('')
   const [pendingAction, setPendingAction] = useState('')
@@ -162,17 +198,26 @@ export function CreatorWalletPanel({ page }) {
 
   async function callUnifiedBalance(action) {
     setError('')
-    setPendingAction(action === 'balances' ? 'gateway-balance' : action === 'deposit' ? 'gateway-deposit' : 'gateway-send')
+    setPendingAction(action === 'setup' ? 'gateway-setup' : action === 'balances' ? 'gateway-balance' : action === 'deposit' ? 'gateway-deposit' : 'gateway-send')
 
     if (action === 'balances') {
       setGatewayBalance(null)
+      setLegacyGatewayBalances([])
     } else {
       setSendResult('')
     }
 
     try {
-      if (!selectedWalletAddress) {
+      if (action !== 'setup' && action !== 'balances' && !selectedWalletAddress) {
         throw new Error(`Set up a ${selectedSource.label} wallet for this Quid page first.`)
+      }
+
+      if (action === 'deposit' && !window.confirm(`Deposit ${amount} USDC from the ${selectedSource.label} receive wallet into this Quid page's unified Gateway balance?`)) {
+        return
+      }
+
+      if (action === 'send' && !window.confirm(`Withdraw ${amount} USDC from this Quid page's unified Gateway balance to the recipient address on Arc Testnet?`)) {
+        return
       }
 
       const response = await fetch('/api/unified-balance', {
@@ -182,7 +227,8 @@ export function CreatorWalletPanel({ page }) {
           action,
           recipientAddress,
           amount,
-          sourceChainId: selectedSource.id
+          sourceChainId: selectedSource.id,
+          confirmed: action === 'deposit' || action === 'send'
         })
       })
       const payload = await response.json().catch(() => ({}))
@@ -191,10 +237,15 @@ export function CreatorWalletPanel({ page }) {
         throw new Error(payload.error ?? 'Circle request failed.')
       }
 
-      if (action === 'balances') {
+      if (action === 'setup') {
+        setGatewayWallet(payload.gatewayWallet ?? null)
+        setSendResult(payload.created ? 'Your Quid Gateway wallet is ready. New Gateway deposits will use this one unified balance.' : 'Your Quid Gateway wallet is already set up.')
+      } else if (action === 'balances') {
         setGatewayBalance(payload.balances ?? payload.result ?? payload)
+        setGatewayWallet(payload.gatewayWallet ?? gatewayWallet)
+        setLegacyGatewayBalances(payload.legacyBalances ?? [])
       } else if (action === 'deposit') {
-        setSendResult(payload.result?.explorerUrl ? `Gateway deposit submitted: ${payload.result.explorerUrl}` : `${amount} USDC deposit to Gateway submitted from ${selectedSource.label}.`)
+        setSendResult(payload.result?.explorerUrl ? `Gateway deposit submitted: ${payload.result.explorerUrl}` : `${amount} USDC was deposited from ${selectedSource.label} into your unified Gateway balance.`)
       } else {
         setSendResult(payload.result?.explorerUrl ? `Gateway withdrawal submitted: ${payload.result.explorerUrl}` : `Gateway withdrawal submitted from ${selectedSource.label} to Arc Testnet.`)
       }
@@ -290,6 +341,15 @@ export function CreatorWalletPanel({ page }) {
           )}
         </div>
 
+        <div className="mt-3 rounded-md border border-ink/10 bg-white px-3 py-2 text-sm text-ink/65">
+          <span className="font-bold text-ink">Quid Gateway wallet: </span>
+          {gatewayWallet?.walletAddress ? (
+            <span className="break-all font-mono text-xs">{gatewayWallet.walletAddress}</span>
+          ) : (
+            <span className="font-semibold text-ink/55">Set this up once to use one Gateway balance across Quid's supported chains.</span>
+          )}
+        </div>
+
         <div className="mt-6 border-y border-arc/15">
           <div className="grid divide-y divide-arc/15 xl:grid-cols-3 xl:divide-x xl:divide-y-0">
             <div className="py-5 xl:pr-5">
@@ -321,12 +381,12 @@ export function CreatorWalletPanel({ page }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => callUnifiedBalance('balances')}
+                  onClick={() => callUnifiedBalance(gatewayWallet ? 'balances' : 'setup')}
                   disabled={isBusy || page.walletMocked}
                   className="quid-secondary-action h-11 w-full px-4 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-panel"
                 >
-                  {pendingAction === 'gateway-balance' ? <Loader2 size={17} className="animate-spin" /> : null}
-                  Check Gateway balance
+                  {pendingAction === 'gateway-balance' || pendingAction === 'gateway-setup' ? <Loader2 size={17} className="animate-spin" /> : null}
+                  {gatewayWallet ? 'Check Gateway balance' : 'Set up Gateway wallet'}
                 </button>
               </div>
             </div>
@@ -350,29 +410,29 @@ export function CreatorWalletPanel({ page }) {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => callUnifiedBalance('deposit')}
+                    onClick={() => callUnifiedBalance(gatewayWallet ? 'deposit' : 'setup')}
                     disabled={isBusy || page.walletMocked}
                     className="quid-primary-action h-11 w-full px-4 disabled:cursor-not-allowed disabled:border-arc/15 disabled:from-haze disabled:to-haze disabled:text-arc/45 disabled:shadow-none disabled:hover:translate-y-0 disabled:hover:from-haze disabled:hover:to-haze"
                   >
-                    {pendingAction === 'gateway-deposit' ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
-                    Deposit to Gateway
+                    {pendingAction === 'gateway-deposit' || pendingAction === 'gateway-setup' ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
+                    {gatewayWallet ? 'Deposit to Gateway' : 'Set up Gateway wallet'}
                   </button>
                 )}
                 {canWithdrawDirectly ? (
                   <button
                     type="button"
-                    onClick={() => callUnifiedBalance('deposit')}
+                    onClick={() => callUnifiedBalance(gatewayWallet ? 'deposit' : 'setup')}
                     disabled={isBusy || page.walletMocked}
                     className="quid-secondary-action h-11 w-full px-4 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-panel"
                   >
-                    {pendingAction === 'gateway-deposit' ? <Loader2 size={17} className="animate-spin" /> : null}
-                    Deposit to Gateway
+                    {pendingAction === 'gateway-deposit' || pendingAction === 'gateway-setup' ? <Loader2 size={17} className="animate-spin" /> : null}
+                    {gatewayWallet ? 'Deposit to Gateway' : 'Set up Gateway wallet'}
                   </button>
                 ) : null}
                 <button
                   type="button"
                   onClick={() => callUnifiedBalance('send')}
-                  disabled={isBusy || page.walletMocked}
+                  disabled={isBusy || page.walletMocked || !gatewayWallet}
                   className="quid-secondary-action h-11 w-full px-4 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-panel"
                 >
                   {pendingAction === 'gateway-send' ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
@@ -385,12 +445,13 @@ export function CreatorWalletPanel({ page }) {
 
         {!canWithdrawDirectly ? (
           <p className="mt-4 rounded-md border border-arc/20 bg-haze px-3 py-2 text-sm font-semibold text-ink/70">
-            {selectedSource.label} direct withdrawal uses Gateway. Deposit this source balance to Gateway first, then withdraw from Gateway to the recipient on Arc Testnet. This Circle wallet also needs test {selectedSource.nativeSymbol} for the approval and deposit gas fees.
+            {selectedSource.label} direct withdrawal uses Gateway. Deposits from this receive wallet credit your one Quid Gateway balance, which you can then withdraw on Arc Testnet. This Circle wallet also needs test {selectedSource.nativeSymbol} for the Gateway deposit fee.
           </p>
         ) : null}
 
         <ReceivedWalletBalance result={receivedBalance} />
-        <GatewayBalanceSummary result={gatewayBalance} />
+        <GatewayBalanceSummary result={gatewayBalance} gatewayWallet={gatewayWallet} />
+        <LegacyGatewayBalanceSummary items={legacyGatewayBalances} />
 
         {sendResult ? (
           <p className="mt-4 break-words rounded-md border border-arc/20 bg-haze px-3 py-2 text-sm font-semibold text-ink">
