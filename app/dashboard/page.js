@@ -9,6 +9,7 @@ import { DashboardReceivedBalance } from '@/components/dashboard-received-balanc
 import { DashboardWalletActivity } from '@/components/dashboard-wallet-activity'
 import { PaymentReceiptButton } from '@/components/payment-receipt-button'
 import { UsdcMark } from '@/components/usdc-mark'
+import { LocalTimestamp } from '@/components/local-timestamp'
 import { FaucetNavButton, HomeNavButton, OpenPaymentPageNavButton, CreateNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { getPaymentSummaryForOwner, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, updatePaymentExplorerForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -23,19 +24,6 @@ function formatUsdc(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })} USDC`
-}
-
-function formatDate(value, emptyLabel = 'No payments yet') {
-  if (!value) {
-    return emptyLabel
-  }
-
-  return new Intl.DateTimeFormat('en', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(new Date(value))
 }
 
 function shortAddress(address) {
@@ -241,7 +229,7 @@ export default async function DashboardPage() {
               <p className="text-sm font-bold uppercase text-ink/50">Recent activity</p>
               <Clock3 size={18} className="text-arc" />
             </div>
-            <p className="mt-4 text-2xl font-black text-ink">{formatDate(summary.recentActivityAt, 'No activity yet')}</p>
+            <p className="mt-4 text-2xl font-black text-ink"><LocalTimestamp value={summary.recentActivityAt} emptyLabel="No activity yet" /></p>
             <p className="mt-2 text-sm text-ink/55">Most recent meaningful Quid activity.</p>
           </div>
         </div>
@@ -352,7 +340,7 @@ export default async function DashboardPage() {
                           {paymentDescription(payment)}
                         </p>
                         <p className="mt-1 text-xs font-semibold uppercase text-ink/40">
-                          {formatDate(payment.createdAt)} - {paymentChainLabel(payment)} - {paymentSourceLabel(payment)}
+                          <LocalTimestamp value={payment.createdAt} /> - {paymentChainLabel(payment)} - {paymentSourceLabel(payment)}
                         </p>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-2">

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ExternalLink, Loader2, ReceiptText, RefreshCw, WalletCards, X } from 'lucide-react'
 import { chainOptions } from '@/lib/chains'
+import { formatQuidTimestamp } from '@/lib/date-time'
 
 function formatUsdc(value) {
   return `${Number(value || 0).toLocaleString(undefined, {
@@ -13,14 +14,7 @@ function formatUsdc(value) {
 }
 
 function formatDate(value) {
-  if (!value) return 'Pending'
-
-  return new Intl.DateTimeFormat('en', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(new Date(value))
+  return formatQuidTimestamp(value, 'Pending')
 }
 
 function shortAddress(address) {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ExternalLink, ReceiptText, X } from 'lucide-react'
+import { formatQuidTimestamp } from '@/lib/date-time'
 
 function formatUsdc(value) {
   return Number(value || 0).toLocaleString(undefined, {
@@ -15,12 +16,7 @@ function fullAddress(address) {
 }
 
 function formatDate(value) {
-  if (!value) return 'Not available'
-
-  return new Intl.DateTimeFormat('en', {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  }).format(new Date(value))
+  return formatQuidTimestamp(value)
 }
 
 function chainLabel(payment) {
