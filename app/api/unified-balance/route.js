@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { createPublicClient, decodeEventLog, http, parseAbiItem } from 'viem'
 import { ARC_EXPLORER_URL, ARC_TESTNET_CHAIN, ARC_USDC_ADDRESS, arcTestnet } from '@/lib/arc'
 import { chainOptions } from '@/lib/chains'
-import { GATEWAY_WALLET_EVM_TESTNET, createQuidGatewayWallet } from '@/lib/circleWallets'
-import { createPaymentRecord, getGatewayWalletForPage, getPageForOwner, getWalletForPageChain, listWalletsForPage, upsertGatewayWalletRecord, upsertWalletActivityRecords } from '@/lib/store'
+import { GATEWAY_WALLET_EVM_TESTNET, depositCircleWalletUsdcToGateway } from '@/lib/circleWallets'
+import { createPaymentRecord, getPageForOwner, getWalletForPageChain, listWalletsForPage, upsertWalletActivityRecords } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createCircleWalletsUnifiedAdapter, createServerUnifiedBalanceKit } from '@/lib/unifiedBalance'
 import { getOnchainActionBlockMessage } from '@/lib/runtime-network'
@@ -103,12 +103,22 @@ async function withRpcRetry(operation) {
   throw lastError
 }
 
-function getLegacyWallets(wallets, gatewayAddress) {
+function getGatewayBalanceWallets(page, wallets) {
   const byAddress = new Map()
 
-  for (const wallet of wallets) {
+  const records = [...wallets]
+  const arcChain = chainOptions[0]
+
+  if (page.walletAddress && !records.some((wallet) => normalizeAddress(wallet.walletAddress) === normalizeAddress(page.walletAddress))) {
+    records.unshift({
+      walletAddress: page.walletAddress,
+      chainLabel: arcChain.label
+    })
+  }
+
+  for (const wallet of records) {
     const address = String(wallet.walletAddress ?? '')
-    if (!address || normalizeAddress(address) === normalizeAddress(gatewayAddress)) {
+    if (!address) {
       continue
     }
 
@@ -157,44 +167,12 @@ export async function POST(request) {
     const sourceWallet = await getWalletForPageChain(page.id, source.id)
     const sourceAddress = sourceWallet?.walletAddress ?? page.walletAddress
 
-    if (action === 'setup') {
-      const existing = await getGatewayWalletForPage(page.id)
-
-      if (existing) {
-        return NextResponse.json({ gatewayWallet: existing, created: false })
-      }
-
-      const created = await createQuidGatewayWallet()
-      const gatewayWallet = await upsertGatewayWalletRecord({
-        pageId: page.id,
-        ownerId: page.ownerId,
-        pageUsername: page.username,
-        walletId: created.id,
-        walletAddress: created.address,
-        walletBlockchain: created.blockchain,
-        walletAccountType: created.accountType,
-        mocked: created.mocked
-      })
-
-      return NextResponse.json({ gatewayWallet, created: true })
-    }
-
-    const gatewayWallet = await getGatewayWalletForPage(page.id)
-
-    if (!gatewayWallet?.walletAddress) {
-      return NextResponse.json({ error: 'Set up your Quid Gateway wallet before checking, depositing, or withdrawing Gateway USDC.' }, { status: 400 })
-    }
-
     if (action === 'balances') {
       const kit = createServerUnifiedBalanceKit()
-      const balances = await withRpcRetry(() => kit.getBalances({
-        sources: { address: gatewayWallet.walletAddress },
-        networkType: 'testnet'
-      }))
       const pageWallets = await listWalletsForPage(page.id)
-      const legacyWallets = getLegacyWallets(pageWallets, gatewayWallet.walletAddress)
-      const legacyResults = await Promise.allSettled(
-        legacyWallets.map(async (wallet) => ({
+      const balanceWallets = getGatewayBalanceWallets(page, pageWallets)
+      const results = await Promise.allSettled(
+        balanceWallets.map(async (wallet) => ({
           ...wallet,
           balances: await withRpcRetry(() => kit.getBalances({
             sources: { address: wallet.walletAddress },
@@ -202,11 +180,11 @@ export async function POST(request) {
           }))
         }))
       )
-      const legacyBalances = legacyResults
+      const walletBalances = results
         .filter((result) => result.status === 'fulfilled')
         .map((result) => result.value)
 
-      return NextResponse.json({ balances, gatewayWallet, legacyBalances })
+      return NextResponse.json({ walletBalances })
     }
 
     if (action === 'deposit') {
@@ -226,16 +204,11 @@ export async function POST(request) {
         return NextResponse.json({ error: `Set up the ${source.label} receive wallet before depositing to Gateway.` }, { status: 400 })
       }
 
-      const kit = createServerUnifiedBalanceKit()
-      const adapter = createCircleWalletsUnifiedAdapter()
-      const result = await kit.depositFor({
-        from: {
-          adapter,
-          chain: source.gatewayName,
-          address: sourceAddress
-        },
-        amount,
-        depositAccount: gatewayWallet.walletAddress
+      const result = await depositCircleWalletUsdcToGateway({
+        walletId: sourceWallet.walletId,
+        chainId: source.id,
+        usdcAddress: source.usdcAddress,
+        amount
       })
       const txHash = getResultHash(result)
       const explorerUrl = result?.explorerUrl ?? null
@@ -276,7 +249,7 @@ export async function POST(request) {
         }
       })
 
-      return NextResponse.json({ result, source, gatewayWallet, payment: recordResults[0].status === 'fulfilled' ? recordResults[0].value : null })
+      return NextResponse.json({ result, source, payment: recordResults[0].status === 'fulfilled' ? recordResults[0].value : null })
     }
 
     if (action === 'send') {
@@ -297,7 +270,8 @@ export async function POST(request) {
       const result = await kit.spend({
         from: {
           adapter,
-          address: gatewayWallet.walletAddress
+          address: sourceAddress,
+          allocations: { amount, chain: source.gatewayName }
         },
         to: {
           chain: ARC_TESTNET_CHAIN,
@@ -318,10 +292,10 @@ export async function POST(request) {
       await Promise.all([
         createPaymentRecord({
           pageUsername: page.username,
-          payerAddress: gatewayWallet.walletAddress,
+          payerAddress: sourceAddress,
           recipientAddress,
           amount,
-          sourceChain: 'Gateway unified balance',
+          sourceChain: source.label,
           destinationChain: 'Arc Testnet',
           txHash,
           explorerUrl,
@@ -333,7 +307,7 @@ export async function POST(request) {
           pageId: page.id,
           ownerId: page.ownerId,
           pageUsername: page.username,
-          walletAddress: gatewayWallet.walletAddress,
+          walletAddress: sourceAddress,
           fromAddress: transfer?.fromAddress ?? null,
           toAddress: transfer?.toAddress ?? recipientAddress,
           amount,
@@ -341,13 +315,13 @@ export async function POST(request) {
           chain: 'Arc Testnet',
           txHash,
           explorerUrl,
-          source: 'Gateway withdrawal',
+          source: `Gateway withdrawal from ${source.label}`,
           blockNumber: transfer?.blockNumber ?? result?.blockNumber ?? null,
           happenedAt: transfer?.happenedAt
         }])
       ])
 
-      return NextResponse.json({ result, source, gatewayWallet })
+      return NextResponse.json({ result, source })
     }
 
     return NextResponse.json({ error: 'Unsupported Unified Balance action.' }, { status: 400 })

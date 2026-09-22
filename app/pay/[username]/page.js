@@ -9,7 +9,7 @@ import { CopyAddressButton } from '@/components/copy-address-button'
 import { ReceiveCard } from '@/components/receive-card'
 import { ScanPayCard } from '@/components/scan-pay-card'
 import { CreateNavButton, DashboardNavButton, FaucetNavButton, HomeNavButton, SignOutNavButton } from '@/components/nav-buttons'
-import { getGatewayWalletForPage, getPage, listWalletsForPage } from '@/lib/store'
+import { getPage, listWalletsForPage } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export async function generateMetadata({ params }) {
@@ -49,9 +49,7 @@ export default async function PayPage({ params, searchParams }) {
   }
 
   const isOwner = user?.id === page.ownerId
-  const [pageWallets, gatewayWallet] = isOwner
-    ? await Promise.all([listWalletsForPage(page.id), getGatewayWalletForPage(page.id)])
-    : [[], null]
+  const pageWallets = isOwner ? await listWalletsForPage(page.id) : []
   const publicPage = {
     name: page.name,
     username: page.username,
@@ -143,7 +141,7 @@ export default async function PayPage({ params, searchParams }) {
             <ReceiveCard page={publicPage} />
           </section>
         ) : null}
-        {isOwner ? <CreatorWalletPanel page={{ ...page, wallets: pageWallets, gatewayWallet }} /> : null}
+        {isOwner ? <CreatorWalletPanel page={{ ...page, wallets: pageWallets }} /> : null}
       </main>
       <AppFooterStrip />
     </>
