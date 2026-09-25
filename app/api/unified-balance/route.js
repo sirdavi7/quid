@@ -256,6 +256,12 @@ export async function POST(request) {
       const kit = createServerUnifiedBalanceKit()
       const adapter = createCircleWalletsUnifiedAdapter()
       const recipientAddress = String(body.recipientAddress ?? '')
+      const destination = chainOptions.find((option) => option.id === Number(body.destinationChainId))
+
+      if (!destination?.gatewayName) {
+        return NextResponse.json({ error: 'Choose a supported destination chain before withdrawing Gateway USDC.' }, { status: 400 })
+      }
+
       if (!validateAddress(recipientAddress)) {
         return NextResponse.json({ error: 'Enter a valid recipient address before withdrawing Gateway USDC.' }, { status: 400 })
       }
@@ -274,7 +280,7 @@ export async function POST(request) {
           allocations: { amount, chain: source.gatewayName }
         },
         to: {
-          chain: ARC_TESTNET_CHAIN,
+          chain: destination.gatewayName,
           recipientAddress,
           useForwarder: true
         },
@@ -283,11 +289,13 @@ export async function POST(request) {
 
       const txHash = getResultHash(result)
       if (!String(txHash ?? '').startsWith('0x')) {
-        throw new Error('Circle did not return the Arc transaction hash for this Gateway withdrawal.')
+        throw new Error('Circle did not return the destination transaction hash for this Gateway withdrawal.')
       }
 
-      const explorerUrl = result?.explorerUrl ?? `${ARC_EXPLORER_URL}/tx/${txHash}`
-      const transfer = await getGatewayWithdrawalTransfer(txHash, recipientAddress)
+      const explorerUrl = result?.explorerUrl ?? (destination.gatewayName === ARC_TESTNET_CHAIN ? `${ARC_EXPLORER_URL}/tx/${txHash}` : null)
+      const transfer = destination.gatewayName === ARC_TESTNET_CHAIN
+        ? await getGatewayWithdrawalTransfer(txHash, recipientAddress)
+        : null
 
       await Promise.all([
         createPaymentRecord({
@@ -296,7 +304,7 @@ export async function POST(request) {
           recipientAddress,
           amount,
           sourceChain: source.label,
-          destinationChain: 'Arc Testnet',
+          destinationChain: destination.label,
           txHash,
           explorerUrl,
           status: 'confirmed',
@@ -312,10 +320,10 @@ export async function POST(request) {
           toAddress: transfer?.toAddress ?? recipientAddress,
           amount,
           asset: 'USDC',
-          chain: 'Arc Testnet',
+          chain: destination.label,
           txHash,
           explorerUrl,
-          source: `Gateway withdrawal from ${source.label}`,
+          source: `Gateway withdrawal from ${source.label} to ${destination.label}`,
           blockNumber: transfer?.blockNumber ?? result?.blockNumber ?? null,
           happenedAt: transfer?.happenedAt
         }])

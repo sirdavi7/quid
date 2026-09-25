@@ -47,9 +47,10 @@ function GatewayBalancesByWallet({ items }) {
 
           return (
             <div key={item.walletAddress} className="rounded-md border border-ink/10 bg-white p-3">
-              <p className="text-sm font-black text-ink">{item.chainLabels.join(', ')}</p>
+              <p className="text-sm font-black text-ink">Shared EVM Gateway balance</p>
               <p className="mt-1 flex items-center gap-1.5 text-lg font-black text-ink"><UsdcMark />{formatBalance(total)} USDC</p>
-              <p className="mt-2 break-all font-mono text-xs text-ink/50">{item.walletAddress}</p>
+              <p className="mt-2 break-all font-mono text-xs text-ink/50">Receive address: {item.walletAddress}</p>
+              <p className="mt-2 text-xs leading-5 text-ink/60">Available through: {item.chainLabels.join(', ')}</p>
             </div>
           )
         })}
@@ -87,6 +88,7 @@ export function CreatorWalletPanel({ page }) {
   const [recipientAddress, setRecipientAddress] = useState('')
   const [amount, setAmount] = useState('1.00')
   const [selectedSourceId, setSelectedSourceId] = useState(String(ARC_TESTNET_ID))
+  const [selectedDestinationId, setSelectedDestinationId] = useState(String(ARC_TESTNET_ID))
   const [wallets, setWallets] = useState(page.wallets ?? [])
   const [receivedBalance, setReceivedBalance] = useState(null)
   const [gatewayBalances, setGatewayBalances] = useState(null)
@@ -95,6 +97,7 @@ export function CreatorWalletPanel({ page }) {
   const [pendingAction, setPendingAction] = useState('')
   const isBusy = Boolean(pendingAction)
   const selectedSource = chainOptions.find((option) => option.id === Number(selectedSourceId)) ?? chainOptions[0]
+  const selectedDestination = chainOptions.find((option) => option.id === Number(selectedDestinationId)) ?? chainOptions[0]
   const canWithdrawDirectly = selectedSource.id === ARC_TESTNET_ID
   const selectedWallet = wallets.find((wallet) => wallet.chainId === selectedSource.id)
   const selectedWalletAddress = selectedWallet?.walletAddress ?? (canWithdrawDirectly ? page.walletAddress : '')
@@ -173,7 +176,7 @@ export function CreatorWalletPanel({ page }) {
         return
       }
 
-      if (action === 'send' && !window.confirm(`Withdraw ${amount} USDC from the ${selectedSource.label} Gateway balance to the recipient address on Arc Testnet?`)) {
+      if (action === 'send' && !window.confirm(`Withdraw ${amount} USDC from the ${selectedSource.label} Gateway balance to the recipient address on ${selectedDestination.label}?`)) {
         return
       }
 
@@ -185,6 +188,7 @@ export function CreatorWalletPanel({ page }) {
           recipientAddress,
           amount,
           sourceChainId: selectedSource.id,
+          destinationChainId: selectedDestination.id,
           confirmed: action === 'deposit' || action === 'send'
         })
       })
@@ -199,7 +203,7 @@ export function CreatorWalletPanel({ page }) {
       } else if (action === 'deposit') {
         setSendResult(payload.result?.explorerUrl ? `Gateway deposit submitted: ${payload.result.explorerUrl}` : `${amount} USDC was deposited from ${selectedSource.label} into its Gateway balance.`)
       } else {
-        setSendResult(payload.result?.explorerUrl ? `Gateway withdrawal submitted: ${payload.result.explorerUrl}` : `Gateway withdrawal submitted from ${selectedSource.label} to Arc Testnet.`)
+        setSendResult(payload.result?.explorerUrl ? `Gateway withdrawal submitted: ${payload.result.explorerUrl}` : `Gateway withdrawal submitted from ${selectedSource.label} to ${selectedDestination.label}.`)
       }
     } catch (requestError) {
       setError(friendlyPanelError(requestError, {
@@ -250,10 +254,11 @@ export function CreatorWalletPanel({ page }) {
       <div className="quid-card p-5">
         <h2 className="text-xl font-black text-ink">Withdraw received USDC</h2>
         <p className="mt-1 text-sm leading-6 text-ink/60">
-          Owner-only controls for checking each chain receive wallet, moving non-Arc funds through Gateway, and withdrawing USDC to an Arc Testnet recipient.
+          Owner-only controls for checking each chain receive wallet, moving funds through Gateway, and withdrawing USDC to a supported destination chain.
         </p>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_220px_160px]">
+        <p className="mt-4 text-xs font-bold uppercase tracking-wide text-ink/50">Recipient address · Source receive wallet · Gateway destination · Amount</p>
+        <div className="mt-2 grid gap-3 md:grid-cols-[1fr_190px_190px_150px]">
           <input
             value={recipientAddress}
             onChange={(event) => setRecipientAddress(event.target.value)}
@@ -262,6 +267,7 @@ export function CreatorWalletPanel({ page }) {
           />
           <select
             value={selectedSourceId}
+            aria-label="Gateway source receive wallet chain"
             onChange={(event) => {
               setSelectedSourceId(event.target.value)
               setReceivedBalance(null)
@@ -274,6 +280,16 @@ export function CreatorWalletPanel({ page }) {
               <option key={option.id} value={option.id}>
                 {option.label}
               </option>
+            ))}
+          </select>
+          <select
+            value={selectedDestinationId}
+            onChange={(event) => setSelectedDestinationId(event.target.value)}
+            aria-label="Gateway withdrawal destination chain"
+            className="h-11 rounded-md border border-ink/15 bg-white px-3 font-semibold text-ink outline-none focus:border-arc"
+          >
+            {chainOptions.filter((option) => option.gatewayName).map((option) => (
+              <option key={option.id} value={option.id}>{option.label}</option>
             ))}
           </select>
           <UsdcAmountInput
@@ -388,7 +404,7 @@ export function CreatorWalletPanel({ page }) {
 
         {!canWithdrawDirectly ? (
           <p className="mt-4 rounded-md border border-arc/20 bg-haze px-3 py-2 text-sm font-semibold text-ink/70">
-            {selectedSource.label} direct withdrawal uses Gateway. Deposit this source balance to Gateway first, then withdraw from that wallet's Gateway balance to the recipient on Arc Testnet. This Circle wallet also needs test {selectedSource.nativeSymbol} for the Gateway deposit fee.
+            {selectedSource.label} direct withdrawal uses Gateway. Deposit this source balance to Gateway first, then choose a supported destination chain for the withdrawal. This Circle wallet also needs test {selectedSource.nativeSymbol} for the Gateway deposit fee.
           </p>
         ) : null}
 
