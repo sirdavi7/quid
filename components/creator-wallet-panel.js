@@ -257,47 +257,58 @@ export function CreatorWalletPanel({ page }) {
           Owner-only controls for checking each chain receive wallet, moving funds through Gateway, and withdrawing USDC to a supported destination chain.
         </p>
 
-        <p className="mt-4 text-xs font-bold uppercase tracking-wide text-ink/50">Recipient address · Source receive wallet · Gateway destination · Amount</p>
-        <div className="mt-2 grid gap-3 md:grid-cols-[1fr_190px_190px_150px]">
-          <input
-            value={recipientAddress}
-            onChange={(event) => setRecipientAddress(event.target.value)}
-            className="h-11 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
-            placeholder="Recipient address"
-          />
-          <select
-            value={selectedSourceId}
-            aria-label="Gateway source receive wallet chain"
-            onChange={(event) => {
-              setSelectedSourceId(event.target.value)
-              setReceivedBalance(null)
-              setSendResult('')
-              setError('')
-            }}
-            className="h-11 rounded-md border border-ink/15 px-3 font-semibold outline-none focus:border-arc"
-          >
-            {chainOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={selectedDestinationId}
-            onChange={(event) => setSelectedDestinationId(event.target.value)}
-            aria-label="Gateway withdrawal destination chain"
-            className="h-11 rounded-md border border-ink/15 bg-white px-3 font-semibold text-ink outline-none focus:border-arc"
-          >
-            {chainOptions.filter((option) => option.gatewayName).map((option) => (
-              <option key={option.id} value={option.id}>{option.label}</option>
-            ))}
-          </select>
-          <UsdcAmountInput
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            className="h-11 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
-            inputMode="decimal"
-          />
+        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_190px_190px_150px]">
+          <label className="grid gap-1.5 text-xs font-bold uppercase tracking-wide text-ink/55">
+            Recipient address
+            <input
+              value={recipientAddress}
+              onChange={(event) => setRecipientAddress(event.target.value)}
+              className="h-11 rounded-md border border-ink/15 px-3 normal-case outline-none focus:border-arc"
+              placeholder="Recipient address"
+            />
+          </label>
+          <label className="grid gap-1.5 text-xs font-bold uppercase tracking-wide text-ink/55">
+            Source receive wallet
+            <select
+              value={selectedSourceId}
+              aria-label="Gateway source receive wallet chain"
+              onChange={(event) => {
+                setSelectedSourceId(event.target.value)
+                setReceivedBalance(null)
+                setSendResult('')
+                setError('')
+              }}
+              className="h-11 rounded-md border border-ink/15 px-3 text-sm font-semibold normal-case outline-none focus:border-arc"
+            >
+              {chainOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1.5 text-xs font-bold uppercase tracking-wide text-ink/55">
+            Gateway destination
+            <select
+              value={selectedDestinationId}
+              onChange={(event) => setSelectedDestinationId(event.target.value)}
+              aria-label="Gateway withdrawal destination chain"
+              className="h-11 rounded-md border border-ink/15 bg-white px-3 text-sm font-semibold normal-case text-ink outline-none focus:border-arc"
+            >
+              {chainOptions.filter((option) => option.gatewayName).map((option) => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <div className="grid gap-1.5 text-xs font-bold uppercase tracking-wide text-ink/55">
+            <span>Amount</span>
+            <UsdcAmountInput
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              className="h-11 rounded-md border border-ink/15 px-3 normal-case outline-none focus:border-arc"
+              inputMode="decimal"
+            />
+          </div>
         </div>
 
         <div className="mt-3 rounded-md border border-arc/15 bg-haze px-3 py-2 text-sm text-ink/65">
