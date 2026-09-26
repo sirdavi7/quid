@@ -127,6 +127,15 @@ export function DashboardChainWallets({ initialWallets = [], page = null, wallet
     setBalanceStatus('ready')
   }
 
+  async function refreshWallets() {
+    if (missingCount > 0) {
+      await setupWallets()
+      return
+    }
+
+    await loadBalances(mergedWallets.filter((wallet) => wallet.walletAddress))
+  }
+
   const primaryArcWallet = primaryArcWalletFromPage(page)
   const mergedWallets =
     primaryArcWallet && !wallets.some((wallet) => wallet.chainId === primaryArcWallet.chainId)
@@ -163,18 +172,20 @@ export function DashboardChainWallets({ initialWallets = [], page = null, wallet
         </div>
         <button
           type="button"
-          onClick={setupWallets}
-          disabled={status === 'loading' || walletMocked}
+          onClick={refreshWallets}
+          disabled={status === 'loading' || balanceStatus === 'loading' || walletMocked}
           className="quid-secondary-action h-10 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {status === 'loading' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+          {status === 'loading' || balanceStatus === 'loading' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
           {status === 'loading'
             ? 'Completing setup'
+            : balanceStatus === 'loading'
+              ? 'Refreshing balances'
             : status === 'error'
               ? 'Retry wallet setup'
               : missingCount
                 ? 'Complete wallet setup'
-                : 'Refresh wallets'}
+                : 'Refresh balances'}
         </button>
       </div>
 
