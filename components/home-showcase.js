@@ -178,19 +178,19 @@ export function HomeShowcase() {
               <Preview slide={activeSlide} />
             </motion.div>
           </AnimatePresence>
-
-          <div className="absolute bottom-4 left-4 right-4 flex gap-1.5 sm:left-5 sm:right-5">
-            {slides.map((slide, index) => (
-              <button
-                key={slide.id}
-                type="button"
-                onClick={() => selectSlide(index)}
-                aria-label={`Show ${slide.label}`}
-                className={`h-1.5 rounded-full transition-all duration-300 ${index === activeIndex ? 'w-7 bg-arc' : 'w-2 bg-ink/15 hover:bg-ink/30'}`}
-              />
-            ))}
-          </div>
         </div>
+      </div>
+      <div className="mt-3 flex justify-center gap-1.5">
+        {slides.map((slide, index) => (
+          <button
+            key={slide.id}
+            type="button"
+            onClick={() => selectSlide(index)}
+            aria-label={`Show ${slide.label}`}
+            aria-current={index === activeIndex ? 'true' : undefined}
+            className={`h-1.5 rounded-full transition-all duration-300 ${index === activeIndex ? 'w-7 bg-arc' : 'w-2 bg-ink/15 hover:bg-ink/30'}`}
+          />
+        ))}
       </div>
     </section>
   )

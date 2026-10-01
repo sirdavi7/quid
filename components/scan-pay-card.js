@@ -189,7 +189,7 @@ export function ScanPayCard() {
   ), [])
 
   return (
-    <section className="quid-card p-5">
+    <section id="scan-pay" className="quid-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-black uppercase text-arc">Scan to pay</p>

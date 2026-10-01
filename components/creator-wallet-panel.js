@@ -250,7 +250,7 @@ export function CreatorWalletPanel({ page }) {
   }
 
   return (
-    <section className="mx-auto max-w-6xl px-5 pb-10">
+    <section id="withdraw" className="mx-auto max-w-6xl px-5 pb-10">
       <div className="quid-card p-5">
         <h2 className="text-xl font-black text-ink">Withdraw received USDC</h2>
         <p className="mt-1 text-sm leading-6 text-ink/60">
