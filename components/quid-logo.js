@@ -3,7 +3,8 @@ import Image from 'next/image'
 const fullSizes = {
   default: { width: 180, height: 54 },
   header: { width: 168, height: 50 },
-  footer: { width: 148, height: 44 }
+  footer: { width: 148, height: 44 },
+  showcase: { width: 120, height: 36 }
 }
 
 export function QuidLogo({ full = false, size = 'default', className = '', priority = false }) {

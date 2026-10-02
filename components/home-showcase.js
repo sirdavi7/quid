@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Camera, CircleDollarSign, Link2, QrCode, Send, WalletCards } from 'lucide-react'
+import { Camera, CircleDollarSign, Link2, Menu, Moon, QrCode, Send, WalletCards } from 'lucide-react'
+import { QuidLogo } from '@/components/quid-logo'
 import { UsdcMark } from '@/components/usdc-mark'
 
 const slides = [
@@ -143,10 +144,17 @@ export function HomeShowcase() {
     <section className="w-full" aria-label="Quid product showcase">
       <div className="h-[292px] overflow-hidden rounded-lg border border-arc/20 bg-white shadow-panel sm:h-[308px]">
         <div className="flex h-11 items-center justify-between border-b border-arc/15 px-4 sm:px-5">
-          <div className="flex items-center gap-2 text-xs font-black uppercase text-arc">
-            <UsdcMark /> Quid workspace
+          <div className="flex min-w-0 items-center">
+            <QuidLogo full size="showcase" />
           </div>
-          <span className="text-xs font-bold text-ink/40">Arc Testnet</span>
+          <div aria-hidden="true" className="flex items-center gap-1.5 text-arc">
+            <span className="grid h-7 w-7 place-items-center rounded-md border border-arc/20 bg-paper">
+              <Moon size={14} />
+            </span>
+            <span className="inline-flex h-7 items-center gap-1.5 rounded-md border border-arc/20 bg-paper px-2 text-[10px] font-black">
+              <Menu size={13} /> Menu
+            </span>
+          </div>
         </div>
 
         <div className="relative h-[calc(100%-2.75rem)] overflow-hidden px-4 pt-5 sm:px-5 sm:pt-6">

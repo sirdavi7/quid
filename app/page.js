@@ -130,7 +130,7 @@ export default async function Home() {
               Built for clear USDC movement, Use Quid
             </p>
             <h1 className="mt-5 max-w-xl text-4xl font-black leading-[1.04] text-ink sm:text-5xl lg:text-6xl">
-              Your USDC payment workspace.
+              Your <span className="quid-usdc-glow">USDC</span> payment workspace.
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-8 text-ink/65">
               Give people one calm place to pay you. Quid brings the page, QR, checkout, wallet route, and proof into one product.
@@ -145,7 +145,7 @@ export default async function Home() {
               </Link>
               <a
                 href="#product"
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-arc/20 bg-paper px-5 text-sm font-black text-ink transition hover:border-arc/45 hover:text-arc sm:w-auto"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-arc/20 bg-paper px-5 text-sm font-black text-arc transition hover:border-arc/45 hover:text-arc dark:text-ink sm:w-auto"
               >
                 Explore products <ArrowRight size={18} />
               </a>
