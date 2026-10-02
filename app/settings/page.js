@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
 import { AppHeader } from '@/components/app-header'
 import { AppFooterStrip } from '@/components/app-footer-strip'
+import { DashboardNavMenu } from '@/components/dashboard-nav-menu'
 import { EditPageForm } from '@/components/edit-page-form'
-import { DashboardNavButton, FaucetNavButton, HomeNavButton, OpenPaymentPageNavButton } from '@/components/nav-buttons'
+import { FaucetNavButton, HomeNavButton } from '@/components/nav-buttons'
 import { getPageForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -36,8 +37,7 @@ export default async function SettingsPage() {
       <main className="min-h-screen bg-paper">
         <AppHeader>
           <HomeNavButton />
-          <OpenPaymentPageNavButton username={page.username} />
-          <DashboardNavButton />
+          <DashboardNavMenu username={page.username} />
           <FaucetNavButton />
         </AppHeader>
 

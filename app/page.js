@@ -16,8 +16,9 @@ import {
 
 import { AppFooter } from '@/components/app-footer'
 import { AppHeader } from '@/components/app-header'
+import { DashboardNavMenu } from '@/components/dashboard-nav-menu'
 import { HomeShowcase } from '@/components/home-showcase'
-import { CreateNavButton, DashboardNavButton, FaucetNavButton, HomeNavButton, LoginNavButton, SignOutNavButton } from '@/components/nav-buttons'
+import { CreateNavButton, FaucetNavButton, HomeNavButton, LoginNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { ScrollReveal } from '@/components/scroll-reveal'
 import { getPageForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -110,7 +111,7 @@ export default async function Home() {
         <HomeNavButton />
         {user ? (
           <>
-            <DashboardNavButton />
+            <DashboardNavMenu username={primaryPage?.username} />
             <SignOutNavButton />
           </>
         ) : (
@@ -209,14 +210,14 @@ export default async function Home() {
                     className="pointer-events-none absolute -right-10 -top-12 w-44 opacity-[0.12] dark:opacity-[0.09]"
                   />
                   <div className="relative">
-                    <div className="grid h-11 w-11 place-items-center rounded-md border border-arc/15 bg-haze text-arc dark:border-white/15 dark:bg-white/10 dark:text-mint">
+                    <div className="grid h-11 w-11 place-items-center rounded-md border border-arc/15 bg-haze text-arc dark:border-arc/40 dark:bg-arc/15 dark:text-arc">
                       <Icon size={20} />
                     </div>
-                    <p className="mt-6 text-xs font-black uppercase text-arc dark:text-white/65">{product.eyebrow}</p>
+                    <p className="mt-6 text-xs font-black uppercase text-arc dark:text-arc">{product.eyebrow}</p>
                     <h3 className="mt-2 text-2xl font-black">{product.title}</h3>
                     <p className="mt-3 max-w-md text-sm leading-6 text-ink/60 dark:text-white/75">{product.body}</p>
                   </div>
-                  <span className="relative mt-auto inline-flex items-center gap-2 pt-6 text-sm font-black text-arc dark:text-white">
+                  <span className="relative mt-auto inline-flex items-center gap-2 pt-6 text-sm font-black text-arc dark:text-arc">
                     {product.action} <ArrowUpRight size={17} className="transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </span>
                 </Link>
@@ -322,7 +323,7 @@ export default async function Home() {
               </p>
               <Link
                 href={user ? '/dashboard' : '/create'}
-                className="quid-secondary-action mt-7 h-12 border-white/60 bg-white px-5 text-arc"
+                className="quid-secondary-action mt-7 h-12 border-white/60 bg-white px-5 text-arc dark:!bg-white"
               >
                 {user ? 'Open dashboard' : 'Create your Quid page'} <ArrowRight size={18} />
               </Link>

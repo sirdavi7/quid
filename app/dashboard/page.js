@@ -10,7 +10,8 @@ import { DashboardWalletActivity } from '@/components/dashboard-wallet-activity'
 import { PaymentReceiptButton } from '@/components/payment-receipt-button'
 import { UsdcMark } from '@/components/usdc-mark'
 import { LocalTimestamp } from '@/components/local-timestamp'
-import { FaucetNavButton, HomeNavButton, OpenPaymentPageNavButton, CreateNavButton, SignOutNavButton } from '@/components/nav-buttons'
+import { DashboardNavMenu } from '@/components/dashboard-nav-menu'
+import { FaucetNavButton, HomeNavButton, CreateNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { getPaymentSummaryForOwner, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, updatePaymentExplorerForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getCircleTransactionDetails } from '@/lib/circleWallets'
@@ -182,7 +183,7 @@ export default async function DashboardPage() {
       <main className="min-h-screen bg-paper">
         <AppHeader>
           <HomeNavButton />
-          {primaryPage ? <OpenPaymentPageNavButton username={primaryPage.username} /> : <CreateNavButton label="Create" />}
+          <DashboardNavMenu username={primaryPage?.username} />
           <SignOutNavButton />
           <FaucetNavButton />
         </AppHeader>

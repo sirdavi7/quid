@@ -8,8 +8,9 @@ import { PayActions } from '@/components/pay-actions'
 import { CopyAddressButton } from '@/components/copy-address-button'
 import { ReceiveCard } from '@/components/receive-card'
 import { ScanPayCard } from '@/components/scan-pay-card'
-import { CreateNavButton, DashboardNavButton, FaucetNavButton, HomeNavButton, SignOutNavButton } from '@/components/nav-buttons'
-import { getPage, listWalletsForPage } from '@/lib/store'
+import { DashboardNavMenu } from '@/components/dashboard-nav-menu'
+import { CreateNavButton, FaucetNavButton, HomeNavButton, SignOutNavButton } from '@/components/nav-buttons'
+import { getPage, getPageForOwner, listWalletsForPage } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export async function generateMetadata({ params }) {
@@ -49,6 +50,7 @@ export default async function PayPage({ params, searchParams }) {
   }
 
   const isOwner = user?.id === page.ownerId
+  const viewerPage = user ? await getPageForOwner(user.id) : null
   const pageWallets = isOwner ? await listWalletsForPage(page.id) : []
   const publicPage = {
     name: page.name,
@@ -65,7 +67,7 @@ export default async function PayPage({ params, searchParams }) {
       <main className="min-h-screen bg-paper">
         <AppHeader>
           <HomeNavButton />
-          {user ? <DashboardNavButton /> : <CreateNavButton label="Create yours" />}
+          {user ? <DashboardNavMenu username={viewerPage?.username} /> : <CreateNavButton label="Create yours" />}
           {user ? <SignOutNavButton /> : null}
           <FaucetNavButton />
         </AppHeader>

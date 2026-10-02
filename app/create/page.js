@@ -2,7 +2,8 @@ import { AppHeader } from '@/components/app-header'
 import { AppFooter } from '@/components/app-footer'
 import { redirect } from 'next/navigation'
 import { CreatePageForm } from '@/components/create-page-form'
-import { DashboardNavButton, FaucetNavButton, HomeNavButton } from '@/components/nav-buttons'
+import { DashboardNavMenu } from '@/components/dashboard-nav-menu'
+import { FaucetNavButton, HomeNavButton } from '@/components/nav-buttons'
 import { getPageForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -35,7 +36,7 @@ export default async function CreatePage() {
     <main className="min-h-screen bg-paper">
       <AppHeader>
         <HomeNavButton />
-        <DashboardNavButton />
+        <DashboardNavMenu />
         <FaucetNavButton />
       </AppHeader>
 
