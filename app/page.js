@@ -199,24 +199,24 @@ export default async function Home() {
               <ScrollReveal key={product.title}>
                 <Link
                   href={product.href}
-                  className="group relative flex h-full min-h-[268px] flex-col overflow-hidden rounded-lg border border-white/15 bg-gradient-to-br from-[#08072f]/94 via-[#17143e]/90 to-[#33205d]/84 p-6 text-white shadow-glow backdrop-blur-sm transition duration-300 hover:-translate-y-0.5"
+                  className="group relative flex h-full min-h-[268px] flex-col overflow-hidden rounded-lg border border-arc/20 bg-white p-6 text-ink shadow-panel transition duration-300 hover:-translate-y-0.5 hover:border-violet/45 dark:border-white/15 dark:bg-gradient-to-br dark:from-[#08072f]/94 dark:via-[#17143e]/90 dark:to-[#33205d]/84 dark:text-white dark:shadow-glow"
                 >
                   <Image
                     src="/brand/quid-q.png"
                     alt=""
                     width={220}
                     height={220}
-                    className="pointer-events-none absolute -right-10 -top-12 w-44 opacity-[0.09]"
+                    className="pointer-events-none absolute -right-10 -top-12 w-44 opacity-[0.12] dark:opacity-[0.09]"
                   />
                   <div className="relative">
-                    <div className="grid h-11 w-11 place-items-center rounded-md border border-white/15 bg-white/10 text-mint">
+                    <div className="grid h-11 w-11 place-items-center rounded-md border border-arc/15 bg-haze text-arc dark:border-white/15 dark:bg-white/10 dark:text-mint">
                       <Icon size={20} />
                     </div>
-                    <p className="mt-6 text-xs font-black uppercase text-white/65">{product.eyebrow}</p>
+                    <p className="mt-6 text-xs font-black uppercase text-arc dark:text-white/65">{product.eyebrow}</p>
                     <h3 className="mt-2 text-2xl font-black">{product.title}</h3>
-                    <p className="mt-3 max-w-md text-sm leading-6 text-white/75">{product.body}</p>
+                    <p className="mt-3 max-w-md text-sm leading-6 text-ink/60 dark:text-white/75">{product.body}</p>
                   </div>
-                  <span className="relative mt-auto inline-flex items-center gap-2 pt-6 text-sm font-black text-white">
+                  <span className="relative mt-auto inline-flex items-center gap-2 pt-6 text-sm font-black text-arc dark:text-white">
                     {product.action} <ArrowUpRight size={17} className="transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </span>
                 </Link>
@@ -295,7 +295,7 @@ export default async function Home() {
               <details className="group border-b border-arc/15 py-5 last:border-b-0">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-black text-ink">
                   <span>{question}</span>
-                  <CircleHelp size={20} className="shrink-0 text-arc" />
+                  <CircleHelp size={20} className="shrink-0 rotate-180 text-arc transition-transform duration-200 group-open:rotate-0" />
                 </summary>
                 <p className="max-w-3xl pt-3 text-sm leading-7 text-ink/60">{answer}</p>
               </details>
