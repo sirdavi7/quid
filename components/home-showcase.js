@@ -142,8 +142,8 @@ export function HomeShowcase() {
 
   return (
     <section className="w-full" aria-label="Quid product showcase">
-      <div className="h-[292px] overflow-hidden rounded-lg border border-arc/20 bg-white shadow-panel sm:h-[308px]">
-        <div className="flex h-11 items-center justify-between border-b border-arc/15 px-4 sm:px-5">
+      <div className="h-[308px] overflow-hidden rounded-lg border border-arc/20 bg-white shadow-panel sm:h-[324px]">
+        <div className="flex h-14 items-center justify-between border-b border-arc/15 px-5 sm:px-6">
           <div className="flex min-w-0 items-center">
             <QuidLogo full size="showcase" />
           </div>
@@ -157,7 +157,7 @@ export function HomeShowcase() {
           </div>
         </div>
 
-        <div className="relative h-[calc(100%-2.75rem)] overflow-hidden px-4 pt-5 sm:px-5 sm:pt-6">
+        <div className="relative h-[calc(100%-3.5rem)] overflow-hidden px-4 pt-5 sm:px-5 sm:pt-6">
           <AnimatePresence mode="wait" custom={direction} initial={false}>
             <motion.div
               key={activeSlide.id}
@@ -188,7 +188,7 @@ export function HomeShowcase() {
           </AnimatePresence>
         </div>
       </div>
-      <div className="mt-3 flex justify-center gap-1.5">
+      <div className="mt-4 flex justify-center gap-1.5">
         {slides.map((slide, index) => (
           <button
             key={slide.id}
