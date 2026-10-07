@@ -8,13 +8,14 @@ import { DashboardChainWallets } from '@/components/dashboard-chain-wallets'
 import { DashboardReceivedBalance } from '@/components/dashboard-received-balance'
 import { DashboardWalletActivity } from '@/components/dashboard-wallet-activity'
 import { PaymentReceiptButton } from '@/components/payment-receipt-button'
+import { TransactionStatusSync } from '@/components/transaction-status-sync'
 import { UsdcMark } from '@/components/usdc-mark'
 import { LocalTimestamp } from '@/components/local-timestamp'
 import { DashboardNavMenu } from '@/components/dashboard-nav-menu'
 import { FaucetNavButton, HomeNavButton, CreateNavButton, SignOutNavButton } from '@/components/nav-buttons'
-import { getPaymentSummaryForOwner, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, updatePaymentExplorerForOwner } from '@/lib/store'
+import { addressOrQuidPageLabel } from '@/lib/address-aliases'
+import { getPaymentSummaryForOwner, getQuidPageAliasesForAddresses, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { getCircleTransactionDetails } from '@/lib/circleWallets'
 
 export const metadata = {
   title: 'Dashboard'
@@ -27,28 +28,20 @@ function formatUsdc(value) {
   })} USDC`
 }
 
-function shortAddress(address) {
-  if (!address) {
-    return 'Unknown payer'
-  }
-
-  return `${address.slice(0, 6)}...${address.slice(-4)}`
-}
-
 function paymentDirection(payment) {
   return payment.kind === 'outgoing' ? '-' : '+'
 }
 
-function paymentDescription(payment) {
+function paymentDescription(payment, addressAliases) {
   if (payment.kind === 'outgoing') {
     if (String(payment.note ?? '').toLowerCase().includes('gateway deposit')) {
       return `From /pay/${payment.pageUsername} to Circle Gateway`
     }
 
-    return `From /pay/${payment.pageUsername} to ${shortAddress(payment.recipientAddress)}`
+    return `From /pay/${payment.pageUsername} to ${addressOrQuidPageLabel(payment.recipientAddress, addressAliases)}`
   }
 
-  return `From ${shortAddress(payment.payerAddress)} to /pay/${payment.pageUsername}`
+  return `From ${addressOrQuidPageLabel(payment.payerAddress, addressAliases, 'Unknown payer')} to /pay/${payment.pageUsername}`
 }
 
 function paymentSourceLabel(payment) {
@@ -86,67 +79,23 @@ function paymentExplorerUrl(payment) {
   return null
 }
 
-function paymentStatusFromCircleState(state, fallback) {
-  const normalized = String(state ?? '').toUpperCase()
+function paymentStatusLabel(status) {
+  const value = String(status ?? 'submitted').toLowerCase()
 
-  if (['COMPLETE', 'CONFIRMED'].includes(normalized)) {
-    return 'confirmed'
-  }
+  if (value === 'submitted') return 'Pending'
+  if (value === 'confirmed') return 'Confirmed'
+  if (value === 'failed') return 'Failed'
 
-  if (['FAILED', 'DENIED', 'CANCELLED'].includes(normalized)) {
-    return 'failed'
-  }
-
-  return fallback ?? 'submitted'
+  return value
 }
 
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Circle transaction lookup timed out.')), ms)
-    })
-  ])
-}
+function paymentStatusClass(status) {
+  const value = String(status ?? 'submitted').toLowerCase()
 
-async function hydratePaymentExplorerLinks(ownerId, payments) {
-  const unresolved = payments
-    .filter((payment) => (
-      payment.kind === 'outgoing' &&
-      payment.txHash &&
-      !paymentExplorerUrl(payment) &&
-      !String(payment.txHash).startsWith('0x')
-    ))
-    .slice(0, 5)
+  if (value === 'confirmed') return 'bg-mint/20 text-ink'
+  if (value === 'failed') return 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-200'
 
-  if (!unresolved.length) {
-    return payments
-  }
-
-  const updates = await Promise.allSettled(
-    unresolved.map(async (payment) => {
-      const resolved = await withTimeout(getCircleTransactionDetails(payment.txHash), 2500)
-
-      if (!resolved.txHash || !String(resolved.txHash).startsWith('0x')) {
-        return null
-      }
-
-      const explorerUrl = resolved.explorerUrl ?? `https://testnet.arcscan.app/tx/${resolved.txHash}`
-      return updatePaymentExplorerForOwner(ownerId, payment.id, {
-        txHash: resolved.txHash,
-        explorerUrl,
-        status: paymentStatusFromCircleState(resolved.state, payment.status)
-      })
-    })
-  )
-
-  const byId = new Map(
-    updates
-      .filter((result) => result.status === 'fulfilled' && result.value)
-      .map((result) => [result.value.id, result.value])
-  )
-
-  return payments.map((payment) => byId.get(payment.id) ?? payment)
+  return 'bg-haze text-ink/70 dark:bg-white/10 dark:text-white/75'
 }
 
 export default async function DashboardPage() {
@@ -165,15 +114,18 @@ export default async function DashboardPage() {
   }
 
   const pages = await listPagesForOwner(user.id)
-  const storedPayments = await listPaymentsForOwner(user.id, 20)
-  const payments = await hydratePaymentExplorerLinks(user.id, storedPayments)
+  const payments = await listPaymentsForOwner(user.id, 20)
   const summary = await getPaymentSummaryForOwner(user.id)
   const primaryPage = pages[0]
   const pageWallets = primaryPage ? await listWalletsForPage(primaryPage.id) : []
   const walletActivities = await listWalletActivityForOwner(user.id, 30)
+  const addressAliases = await getQuidPageAliasesForAddresses([
+    ...payments.flatMap((payment) => [payment.payerAddress, payment.recipientAddress]),
+    ...walletActivities.flatMap((activity) => [activity.fromAddress, activity.toAddress])
+  ])
   const outgoingPayments = payments.filter((payment) => (
     payment.kind === 'outgoing' &&
-    payment.status !== 'failed' &&
+    payment.status === 'confirmed' &&
     !String(payment.note ?? '').toLowerCase().includes('gateway deposit')
   ))
   const outgoingTotal = outgoingPayments.reduce((total, payment) => total + Number(payment.amount), 0)
@@ -181,6 +133,7 @@ export default async function DashboardPage() {
   return (
     <>
       <main className="min-h-screen bg-paper">
+        <TransactionStatusSync hasSubmittedPayments={payments.some((payment) => payment.status === 'submitted')} />
         <AppHeader>
           <HomeNavButton />
           <DashboardNavMenu username={primaryPage?.username} />
@@ -338,17 +291,17 @@ export default async function DashboardPage() {
                       <div className="min-w-0">
                         <p className="font-black text-ink">{paymentDirection(payment)}{formatUsdc(payment.amount)}</p>
                         <p className="mt-1 text-sm text-ink/55">
-                          {paymentDescription(payment)}
+                          {paymentDescription(payment, addressAliases)}
                         </p>
                         <p className="mt-1 text-xs font-semibold uppercase text-ink/40">
-                          <LocalTimestamp value={payment.createdAt} /> - {paymentChainLabel(payment)} - {paymentSourceLabel(payment)}
+                          <LocalTimestamp value={payment.confirmedAt ?? payment.createdAt} /> - {paymentChainLabel(payment)} - {paymentSourceLabel(payment)}
                         </p>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className="rounded-md bg-mint/20 px-2 py-1 text-xs font-bold uppercase text-ink">
-                          {payment.status}
+                        <span className={`rounded-md px-2 py-1 text-xs font-bold uppercase ${paymentStatusClass(payment.status)}`}>
+                          {paymentStatusLabel(payment.status)}
                         </span>
-                        <PaymentReceiptButton payment={payment} explorerUrl={paymentExplorerUrl(payment)} />
+                        <PaymentReceiptButton payment={payment} explorerUrl={paymentExplorerUrl(payment)} addressAliases={addressAliases} />
                         {paymentExplorerUrl(payment) ? (
                           <a href={paymentExplorerUrl(payment)} target="_blank" rel="noreferrer" className="quid-secondary-action h-8 gap-1 px-2 text-xs">
                             Explorer <ExternalLink size={13} />
@@ -374,6 +327,7 @@ export default async function DashboardPage() {
           <div className="mt-6">
             <DashboardWalletActivity
               initialActivities={walletActivities}
+              addressAliases={addressAliases}
               walletMocked={primaryPage.walletMocked}
             />
           </div>

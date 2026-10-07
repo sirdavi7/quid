@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ExternalLink, ReceiptText, X } from 'lucide-react'
 import { formatQuidTimestamp } from '@/lib/date-time'
+import { addressOrQuidPageLabel } from '@/lib/address-aliases'
 
 function formatUsdc(value) {
   return Number(value || 0).toLocaleString(undefined, {
@@ -27,9 +28,15 @@ function chainLabel(payment) {
 }
 
 function paymentType(payment) {
+  const operation = String(payment.operation ?? '').toLowerCase()
   const note = String(payment.note ?? '').toLowerCase()
 
+  if (operation === 'gateway-deposit') return 'Gateway deposit'
+  if (operation === 'gateway-withdrawal') return 'Gateway withdrawal'
+  if (operation === 'connected-wallet-send') return 'Connected wallet send'
+  if (operation === 'direct-withdrawal') return 'Direct withdrawal'
   if (note.includes('gateway deposit')) return 'Gateway deposit'
+  if (note.includes('gateway withdrawal')) return 'Gateway withdrawal'
   if (note.includes('connected')) return 'Connected wallet send'
   if (note.includes('direct')) return 'Direct withdrawal'
   if (payment.kind === 'outgoing') return 'Owner withdrawal'
@@ -37,41 +44,56 @@ function paymentType(payment) {
   return 'Checkout payment'
 }
 
-function fromLabel(payment) {
+function fromLabel(payment, addressAliases) {
   if (paymentType(payment) === 'Gateway deposit') {
     return '/pay/' + payment.pageUsername
   }
 
-  return fullAddress(payment.payerAddress)
+  if (payment.kind === 'outgoing') {
+    return '/pay/' + payment.pageUsername
+  }
+
+  return addressOrQuidPageLabel(payment.payerAddress, addressAliases, 'Not available')
 }
 
-function toLabel(payment) {
+function toLabel(payment, addressAliases) {
   if (paymentType(payment) === 'Gateway deposit') {
     return 'Circle Gateway'
   }
 
   return payment.kind === 'outgoing'
-    ? fullAddress(payment.recipientAddress)
+    ? addressOrQuidPageLabel(payment.recipientAddress, addressAliases, 'Not available')
     : '/pay/' + payment.pageUsername
 }
 
 function statusLabel(status) {
-  return String(status ?? 'submitted').replace(/^./, (character) => character.toUpperCase())
+  const value = String(status ?? 'submitted').toLowerCase()
+
+  if (value === 'submitted') return 'Pending'
+  if (value === 'confirmed') return 'Confirmed'
+  if (value === 'failed') return 'Failed'
+
+  return value
 }
 
-export function PaymentReceiptButton({ payment, explorerUrl }) {
+export function PaymentReceiptButton({ payment, explorerUrl, addressAliases = {} }) {
   const [open, setOpen] = useState(false)
   const rows = [
     ['Type', paymentType(payment)],
     ['Amount', formatUsdc(payment.amount)],
-    ['From', fromLabel(payment)],
-    ['To', toLabel(payment)],
+    ['From', fromLabel(payment, addressAliases)],
+    ['Sender wallet', fullAddress(payment.payerAddress)],
+    ['To', toLabel(payment, addressAliases)],
+    ['Recipient wallet', fullAddress(payment.recipientAddress)],
     ['Source chain', payment.sourceChain || 'Arc Testnet'],
     ['Destination chain', payment.destinationChain || 'Arc Testnet'],
-    ['Transaction hash', fullAddress(payment.txHash)],
-    ['Block number', payment.blockNumber ?? 'Not supplied by Circle'],
+    ['Transaction hash', payment.txHash ? fullAddress(payment.txHash) : 'Not available yet'],
+    ...(payment.circleTransactionId ? [['Circle transaction ID', payment.circleTransactionId]] : []),
+    ['Block number', payment.blockNumber ?? (payment.status === 'confirmed' ? 'Not supplied by Circle' : 'Not available yet')],
     ['Status', statusLabel(payment.status)],
-    ['Time', formatDate(payment.createdAt)]
+    ['Submitted', formatDate(payment.createdAt)],
+    ...(payment.confirmedAt ? [['Confirmed', formatDate(payment.confirmedAt)]] : []),
+    ...(payment.failureReason ? [['Failure', payment.failureReason]] : [])
   ]
 
   return (

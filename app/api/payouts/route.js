@@ -48,10 +48,10 @@ export async function POST(request) {
       amount
     })
 
-    const txHash = result?.transactionHash ?? result?.hash ?? result?.txHash ?? result?.id
+    const txHash = result?.transactionHash ?? result?.hash ?? result?.txHash ?? null
     const explorerUrl = result?.explorerUrl ?? (String(txHash ?? '').startsWith('0x') ? `https://testnet.arcscan.app/tx/${txHash}` : null)
 
-    await createPaymentRecord({
+    const payment = await createPaymentRecord({
       pageUsername: page.username,
       payerAddress: page.walletAddress,
       recipientAddress,
@@ -60,12 +60,15 @@ export async function POST(request) {
       destinationChain: 'Arc Testnet',
       txHash,
       explorerUrl,
-      status: explorerUrl ? 'confirmed' : 'submitted',
+      circleTransactionId: result?.id ?? null,
+      circleState: result?.state ?? 'INITIATED',
+      status: 'submitted',
       kind: 'outgoing',
+      operation: 'direct-withdrawal',
       note: 'Direct withdrawal'
     })
 
-    return NextResponse.json({ result, explorerUrl })
+    return NextResponse.json({ result, explorerUrl, payment })
   } catch (error) {
     logServerError('Arc withdrawal', error)
     return NextResponse.json({ error: getSafeApiError(error, { fallback: 'We could not submit this Arc withdrawal. Check the recipient and wallet balance, then try again.' }) }, { status: 500 })

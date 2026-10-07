@@ -2,7 +2,7 @@
 
 import { createViemAdapterFromProvider } from '@circle-fin/adapter-viem-v2'
 import { UnifiedBalanceKit } from '@circle-fin/unified-balance-kit'
-import { AlertCircle, ExternalLink, Loader2, Send } from 'lucide-react'
+import { AlertCircle, Loader2, Send } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
 import { formatUnits, isAddress, parseUnits } from 'viem'
@@ -19,6 +19,7 @@ import { ARC_TESTNET_CHAIN, ARC_TESTNET_ID, ARC_USDC_ADDRESS, usdcAbi } from '@/
 import { chainOptions } from '@/lib/chains'
 import { getFriendlyUserError } from '@/lib/user-errors'
 import { UsdcAmountInput, UsdcMark } from '@/components/usdc-mark'
+import { PaymentStatusCard } from '@/components/payment-status-card'
 
 const WalletConnectButton = dynamic(() => import('./wallet-connect-button'), {
   ssr: false,
@@ -62,6 +63,25 @@ function getQueryChainId(value) {
   return selected ? String(selected.id) : null
 }
 
+function formatFeeAmount(value) {
+  const amount = Number(value)
+
+  if (!Number.isFinite(amount)) {
+    return String(value ?? 'Unavailable')
+  }
+
+  return amount.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 6
+  })
+}
+
+function quoteLines(fees = []) {
+  return fees
+    .filter((fee) => fee?.amount !== undefined && fee?.token)
+    .map((fee) => `${String(fee.type ?? 'Gateway fee')}: ${formatFeeAmount(fee.amount)} ${fee.token}`)
+}
+
 export function PayActions({ page, isOwner = false, initialAmount, initialChain }) {
   const { address, connector, isConnected } = useAccount()
   const chainId = useChainId()
@@ -82,7 +102,8 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     recipient: '',
     amount: '1.00'
   })
-  const [success, setSuccess] = useState(null)
+  const [transaction, setTransaction] = useState(null)
+  const [feePreview, setFeePreview] = useState({ state: 'idle' })
   const [error, setError] = useState('')
   const [pendingAction, setPendingAction] = useState('')
   const isBusy = Boolean(pendingAction)
@@ -141,6 +162,57 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       sourceUsdcBalance < requestedPaymentAmount
   )
 
+  useEffect(() => {
+    let cancelled = false
+    const amount = Number(payForm.amount)
+
+    if (!isConnected || !address || !isAddress(page.walletAddress) || !Number.isFinite(amount) || amount <= 0) {
+      setFeePreview({ state: 'idle' })
+      return undefined
+    }
+
+    if (!isArcSource && chainId !== selectedSource.id) {
+      setFeePreview({
+        state: 'network-needed',
+        network: selectedSource.label,
+        gasAsset: selectedSource.nativeSymbol,
+        detail: `Switch your wallet to ${selectedSource.label} to load its live Gateway fee quote.`
+      })
+      return undefined
+    }
+
+    setFeePreview({
+      state: 'loading',
+      network: selectedSource.label,
+      gasAsset: isArcSource ? 'USDC' : selectedSource.nativeSymbol
+    })
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const adapter = isArcSource ? null : await getCurrentAdapter()
+        const quote = await getPaymentFeeQuote(selectedSource, payForm.amount, adapter)
+
+        if (!cancelled) {
+          setFeePreview({ state: 'ready', ...quote })
+        }
+      } catch {
+        if (!cancelled) {
+          setFeePreview({
+            state: 'unavailable',
+            network: selectedSource.label,
+            gasAsset: isArcSource ? 'USDC' : selectedSource.nativeSymbol,
+            detail: 'Live fee quote is unavailable right now. Quid will not ask for a signature until it can retrieve one.'
+          })
+        }
+      }
+    }, 350)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [address, chainId, connector, isArcSource, isConnected, page.walletAddress, payForm.amount, selectedSource])
+
   async function getAdapter(requiredChainId) {
     if (!connector) {
       throw new Error('Connect a wallet first.')
@@ -150,6 +222,82 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     }
     const provider = await connector.getProvider()
     return createViemAdapterFromProvider({ provider })
+  }
+
+  async function getCurrentAdapter() {
+    if (!connector) {
+      throw new Error('Connect a wallet first.')
+    }
+
+    const provider = await connector.getProvider()
+    return createViemAdapterFromProvider({ provider })
+  }
+
+  async function getArcFeeQuote(recipientAddress, amount) {
+    if (!arcPublicClient || !address) {
+      throw new Error('Quid could not estimate the Arc network fee yet.')
+    }
+
+    const [gas, gasPrice] = await Promise.all([
+      arcPublicClient.estimateContractGas({
+        address: ARC_USDC_ADDRESS,
+        abi: usdcAbi,
+        functionName: 'transfer',
+        args: [recipientAddress, parseUnits(amount, 6)],
+        account: address
+      }),
+      arcPublicClient.getGasPrice()
+    ])
+
+    return {
+      network: 'Arc Testnet',
+      gasAsset: 'USDC',
+      feeLines: [`${formatFeeAmount(formatUnits(gas * gasPrice, 18))} USDC`],
+      detail: 'Arc uses USDC for network gas. This fee is separate from the payment amount.'
+    }
+  }
+
+  async function getGatewaySpendQuote(selected, adapter, amount) {
+    const result = await kit.estimateSpend({
+      from: {
+        adapter,
+        allocations: { amount, chain: selected.gatewayName }
+      },
+      to: {
+        chain: ARC_TESTNET_CHAIN,
+        recipientAddress: page.walletAddress,
+        useForwarder: true
+      },
+      amount
+    })
+    const lines = quoteLines(result?.fees)
+
+    return {
+      network: selected.label,
+      gasAsset: selected.nativeSymbol,
+      feeLines: lines.length ? lines : ['No additional Gateway fee'],
+      detail: lines.length
+        ? `${selected.nativeSymbol} is required by ${selected.label} for network gas.`
+        : 'Gateway did not quote an additional route fee for this payment.'
+    }
+
+  }
+
+  async function getPaymentFeeQuote(selected, amount, adapter) {
+    if (selected.id === ARC_TESTNET_ID) {
+      return getArcFeeQuote(page.walletAddress, amount)
+    }
+
+    return getGatewaySpendQuote(selected, adapter, amount)
+  }
+
+  function paymentConfirmationMessage(quote, amount, recipientLabel) {
+    return [
+      `Send ${amount} USDC to ${recipientLabel}?`,
+      `Network: ${quote.network}`,
+      `Estimated fee: ${quote.feeLines.join(' + ')}`,
+      quote.detail
+    ].join('\n\n')
   }
 
   function getFriendlyError(message) {
@@ -162,11 +310,6 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     }
 
     return getFriendlyUserError(message, { fallback: 'We could not complete this payment. Check your wallet and try again.' })
-  }
-
-  function shortAddress(value) {
-    if (!value) return 'recipient'
-    return `${value.slice(0, 6)}...${value.slice(-4)}`
   }
 
   async function savePaymentRecord(record, fallbackMessage) {
@@ -203,19 +346,23 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
   }
 
   async function recordSubmittedPayment({ selected, result }) {
-    await savePaymentRecord({
+    const txHash = result?.transactionHash ?? result?.txHash ?? result?.hash
+
+    return savePaymentRecord({
       pageUsername: page.username,
       payerAddress: address,
       amount: payForm.amount,
       sourceChain: selected.label,
-      explorerUrl: result?.explorerUrl,
-      txHash: result?.transactionHash ?? result?.hash,
+      destinationChain: 'Arc Testnet',
+      explorerUrl: result?.explorerUrl ?? (String(txHash ?? '').startsWith('0x') ? `https://testnet.arcscan.app/tx/${txHash}` : null),
+      txHash,
+      operation: 'checkout',
       note: `Paid ${page.name}`
     }, 'Payment submitted, but Quid could not save the receipt yet.')
   }
 
   async function recordOutgoingConnectedWalletSend({ hash }) {
-    await savePaymentRecord({
+    return savePaymentRecord({
       pageUsername: page.username,
       payerAddress: address,
       recipientAddress: sendForm.recipient,
@@ -225,27 +372,14 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       explorerUrl: `https://testnet.arcscan.app/tx/${hash}`,
       txHash: hash,
       kind: 'outgoing',
+      operation: 'connected-wallet-send',
       note: 'Connected wallet send'
     }, 'Transfer submitted, but Quid could not save the record yet.')
   }
 
-  async function waitForArcTransferReceipt(hash) {
-    if (!arcPublicClient) {
-      throw new Error('Arc RPC is still getting ready. Try the payment again in a moment.')
-    }
-
-    const receipt = await arcPublicClient.waitForTransactionReceipt({ hash })
-
-    if (receipt.status !== 'success') {
-      throw new Error('Arc transaction failed before confirmation.')
-    }
-
-    return receipt
-  }
-
   async function payWithUnifiedBalance(event) {
     event.preventDefault()
-    setSuccess(null)
+    setTransaction(null)
     setError('')
     setPendingAction('pay')
 
@@ -274,6 +408,13 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
           await switchChainAsync({ chainId: ARC_TESTNET_ID })
         }
 
+        const quote = await getPaymentFeeQuote(selected, payForm.amount)
+        setFeePreview({ state: 'ready', ...quote })
+
+        if (!window.confirm(paymentConfirmationMessage(quote, payForm.amount, `/pay/${page.username}`))) {
+          return
+        }
+
         const hash = await writeContractAsync({
           address: ARC_USDC_ADDRESS,
           abi: usdcAbi,
@@ -281,13 +422,19 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
           args: [page.walletAddress, parseUnits(payForm.amount, 6)],
           chainId: ARC_TESTNET_ID
         })
-        await waitForArcTransferReceipt(hash)
         result = {
           hash,
           explorerUrl: `https://testnet.arcscan.app/tx/${hash}`
         }
       } else {
         const adapter = await getAdapter(selected.id)
+        const quote = await getPaymentFeeQuote(selected, payForm.amount, adapter)
+        setFeePreview({ state: 'ready', ...quote })
+
+        if (!window.confirm(paymentConfirmationMessage(quote, payForm.amount, `/pay/${page.username}`))) {
+          return
+        }
+
         result = await kit.spend({
           from: {
             adapter,
@@ -302,14 +449,8 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
         })
       }
 
-      await recordSubmittedPayment({ selected, result })
-      const didWaitForArcReceipt = selected.id === ARC_TESTNET_ID
-      setSuccess({
-        title: didWaitForArcReceipt ? 'Payment confirmed' : 'Payment submitted',
-        detail: `USDC payment to /pay/${page.username} was ${didWaitForArcReceipt ? 'confirmed' : 'sent'} and saved to the creator dashboard.`,
-        url: result?.explorerUrl,
-        linkLabel: selected.id === ARC_TESTNET_ID ? 'View on ArcScan' : 'View transaction'
-      })
+      const payment = await recordSubmittedPayment({ selected, result })
+      setTransaction(payment)
     } catch (payError) {
       setError(getFriendlyError(payError.message))
     } finally {
@@ -319,7 +460,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
 
   async function sendArcUsdc(event) {
     event.preventDefault()
-    setSuccess(null)
+    setTransaction(null)
     setError('')
     setPendingAction('send')
 
@@ -340,6 +481,12 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
         await switchChainAsync({ chainId: ARC_TESTNET_ID })
       }
 
+      const quote = await getArcFeeQuote(sendForm.recipient, sendForm.amount)
+
+      if (!window.confirm(paymentConfirmationMessage(quote, sendForm.amount, sendForm.recipient))) {
+        return
+      }
+
       const hash = await writeContractAsync({
         address: ARC_USDC_ADDRESS,
         abi: usdcAbi,
@@ -348,14 +495,8 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
         chainId: ARC_TESTNET_ID
       })
 
-      await waitForArcTransferReceipt(hash)
-      await recordOutgoingConnectedWalletSend({ hash })
-      setSuccess({
-        title: 'Arc transfer confirmed',
-        detail: `USDC was confirmed to ${shortAddress(sendForm.recipient)} and recorded in Quid money movement.`,
-        url: `https://testnet.arcscan.app/tx/${hash}`,
-        linkLabel: 'View on ArcScan'
-      })
+      const payment = await recordOutgoingConnectedWalletSend({ hash })
+      setTransaction(payment)
     } catch (sendError) {
       setError(getFriendlyError(sendError.message))
     } finally {
@@ -435,6 +576,32 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
           </label>
         </div>
 
+        <div className="mt-4 rounded-md border border-arc/15 bg-haze/70 px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-black uppercase text-arc">Network and fee</p>
+            <p className="text-xs font-bold text-ink/55">
+              {feePreview.network ?? selectedSource.label} · Gas: {feePreview.gasAsset ?? (isArcSource ? 'USDC' : selectedSource.nativeSymbol)}
+            </p>
+          </div>
+          {feePreview.state === 'loading' ? (
+            <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-ink/60">
+              <Loader2 size={15} className="animate-spin" /> Checking live fee quote
+            </p>
+          ) : null}
+          {feePreview.state === 'ready' ? (
+            <>
+              <p className="mt-2 text-sm font-black text-ink">Estimated fee: {feePreview.feeLines.join(' + ')}</p>
+              <p className="mt-1 text-xs leading-5 text-ink/60">{feePreview.detail}</p>
+            </>
+          ) : null}
+          {['network-needed', 'unavailable'].includes(feePreview.state) ? (
+            <p className="mt-2 text-xs leading-5 text-ink/60">{feePreview.detail}</p>
+          ) : null}
+          {feePreview.state === 'idle' ? (
+            <p className="mt-2 text-xs leading-5 text-ink/60">Connect a wallet and enter an amount to load the current fee.</p>
+          ) : null}
+        </div>
+
         <button
           disabled={isBusy}
           className="quid-primary-action mt-4 h-11 w-full px-4 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
@@ -483,17 +650,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
         </form>
       ) : null}
 
-      {success ? (
-        <div className="rounded-md border border-mint/30 bg-mint/20 px-3 py-3 text-sm text-ink">
-          <p className="font-black">{success.title}</p>
-          <p className="mt-1 break-words font-semibold text-ink/65">{success.detail}</p>
-          {success.url ? (
-            <a href={success.url} target="_blank" rel="noreferrer" className="quid-secondary-action mt-3 h-9 w-fit gap-1 px-3 text-xs">
-              {success.linkLabel} <ExternalLink size={13} />
-            </a>
-          ) : null}
-        </div>
-      ) : null}
+      <PaymentStatusCard initialPayment={transaction} />
       {error ? (
         <p className="flex gap-2 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
           <AlertCircle size={18} /> {error}

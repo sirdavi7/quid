@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { ExternalLink, Loader2, ReceiptText, RefreshCw, WalletCards, X } from 'lucide-react'
 import { chainOptions } from '@/lib/chains'
 import { formatQuidTimestamp } from '@/lib/date-time'
+import { addressOrQuidPageLabel, quidPageLabelForAddress } from '@/lib/address-aliases'
 
 function formatUsdc(value) {
   return `${Number(value || 0).toLocaleString(undefined, {
@@ -15,11 +16,6 @@ function formatUsdc(value) {
 
 function formatDate(value) {
   return formatQuidTimestamp(value, 'Pending')
-}
-
-function shortAddress(address) {
-  if (!address) return 'Unknown'
-  return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
 
 function fullAddress(address) {
@@ -60,6 +56,7 @@ function formatActivitySource(source) {
   const normalized = String(source ?? '').toLowerCase()
 
   if (normalized.includes('faucet')) return 'Faucet deposit'
+  if (normalized.includes('checkout')) return 'Checkout payment'
   if (normalized.includes('gateway deposit')) return 'Gateway deposit'
   if (normalized.includes('gateway withdrawal')) return 'Gateway withdrawal'
   if (normalized.includes('balance sync') || normalized.includes('source not identified')) return 'Balance update'
@@ -71,34 +68,60 @@ function formatActivitySource(source) {
   return 'Wallet transfer'
 }
 
-function activityDescription(activity) {
+function activitySenderLabel(activity, addressAliases) {
+  if (String(activity.source ?? '').toLowerCase().includes('gateway withdrawal')) {
+    return 'Circle Gateway'
+  }
+
+  if (activityType(activity) === 'Send' && !String(activity.source ?? '').toLowerCase().includes('connected')) {
+    return `/pay/${activity.pageUsername}`
+  }
+
+  return addressOrQuidPageLabel(activity.fromAddress, addressAliases, 'Unknown sender')
+}
+
+function activityRecipientLabel(activity, addressAliases) {
+  if (String(activity.source ?? '').toLowerCase().includes('gateway deposit')) {
+    return 'Circle Gateway'
+  }
+
+  if (activityType(activity) === 'Receive') {
+    return quidPageLabelForAddress(activity.toAddress, addressAliases) ?? `/pay/${activity.pageUsername}`
+  }
+
+  return addressOrQuidPageLabel(activity.toAddress, addressAliases, 'Unknown recipient')
+}
+
+function activityDescription(activity, addressAliases) {
   const type = activityType(activity)
   const source = String(activity.source ?? '').toLowerCase()
+  const sender = activitySenderLabel(activity, addressAliases)
+  const recipient = activityRecipientLabel(activity, addressAliases)
 
   if (type === 'Send') {
     if (source.includes('gateway deposit')) {
-      return 'From received wallet to Circle Gateway'
+      return `From ${sender} to ${recipient}`
     }
 
     if (source.includes('gateway withdrawal')) {
-      return `Gateway withdrawal to ${shortAddress(activity.toAddress)}`
+      return `From ${sender} to ${recipient}`
     }
 
     if (source.includes('connected')) {
-      return `From connected wallet to ${shortAddress(activity.toAddress)}`
+      return `From ${sender} to ${recipient}`
     }
 
-    return `From received wallet to ${shortAddress(activity.toAddress)}`
+    return `From ${sender} to ${recipient}`
   }
 
   if (isBalanceSync(activity)) {
     return activity.fromAddress
-      ? `Confirmed from ${shortAddress(activity.fromAddress)} to received wallet`
+      ? `Confirmed from ${sender} to ${recipient}`
       : `Balance updated on ${activity.chain ?? 'supported chain'}; source could not be identified`
   }
 
   return activity.fromAddress
-    ? `Confirmed from ${shortAddress(activity.fromAddress)} to received wallet`
+    ? `Confirmed from ${sender} to ${recipient}`
     : `Balance received on ${activity.chain ?? 'supported chain'}; source could not be identified`
 }
 
@@ -121,8 +144,9 @@ function explorerLabel(activity) {
   return chain.includes('arc') ? 'ArcScan' : 'Explorer'
 }
 
-export function DashboardWalletActivity({ initialActivities = [], walletMocked = false }) {
+export function DashboardWalletActivity({ initialActivities = [], addressAliases = {}, walletMocked = false }) {
   const [activities, setActivities] = useState(() => initialActivities.filter((activity) => !isBalanceSync(activity)))
+  const [knownAddressAliases, setKnownAddressAliases] = useState(addressAliases)
   const [status, setStatus] = useState(walletMocked ? 'mocked' : 'idle')
   const [error, setError] = useState('')
   const [typeFilter, setTypeFilter] = useState('All types')
@@ -153,6 +177,7 @@ export function DashboardWalletActivity({ initialActivities = [], walletMocked =
       }
 
       setActivities((payload.activities ?? []).filter((activity) => !isBalanceSync(activity)))
+      setKnownAddressAliases((current) => ({ ...current, ...(payload.addressAliases ?? {}) }))
       setStatus('ready')
     } catch (err) {
       setError((activities.length || initialActivities.length) ? '' : friendlyActivityError(err.message))
@@ -163,6 +188,14 @@ export function DashboardWalletActivity({ initialActivities = [], walletMocked =
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    setActivities(initialActivities.filter((activity) => !isBalanceSync(activity)))
+  }, [initialActivities])
+
+  useEffect(() => {
+    setKnownAddressAliases(addressAliases)
+  }, [addressAliases])
 
   useEffect(() => {
     if (didAutoLoad.current) return
@@ -202,8 +235,10 @@ export function DashboardWalletActivity({ initialActivities = [], walletMocked =
   const receiptRows = receipt ? [
     ['Type', activityType(receipt)],
     ['Amount', formatUsdc(receipt.amount)],
-    ['Sender', receiptIsBalanceSync ? 'Source could not be identified' : fullAddress(receipt.fromAddress)],
-    ['Recipient', fullAddress(receipt.toAddress)],
+    ['Sender', receiptIsBalanceSync ? 'Source could not be identified' : activitySenderLabel(receipt, knownAddressAliases)],
+    ...(receiptIsBalanceSync ? [] : [['Source wallet', fullAddress(receipt.fromAddress)]]),
+    ['Recipient', activityRecipientLabel(receipt, knownAddressAliases)],
+    ...(receiptIsBalanceSync ? [] : [['Destination wallet', fullAddress(receipt.toAddress)]]),
     ['Chain', receipt.chain ?? 'Supported chain'],
     ...(receiptIsBalanceSync
       ? [
@@ -373,7 +408,7 @@ export function DashboardWalletActivity({ initialActivities = [], walletMocked =
                     <p className="text-xl font-black text-ink">
                       {sign}{formatUsdc(activity.amount)}
                     </p>
-                    <p className="mt-1 break-words text-sm text-ink/60">{activityDescription(activity)}</p>
+                    <p className="mt-1 break-words text-sm text-ink/60">{activityDescription(activity, knownAddressAliases)}</p>
                     <p className="mt-1 text-xs font-semibold uppercase text-ink/40">
                       {formatDate(activity.happenedAt)} - {activity.chain ?? 'Arc Testnet'} - {formatActivitySource(activity.source)}
                     </p>

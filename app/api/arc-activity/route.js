@@ -4,7 +4,7 @@ import { arcTestnet, ARC_EXPLORER_URL, ARC_TESTNET_ID } from '@/lib/arc'
 import { chains, chainOptions } from '@/lib/chains'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
-import { listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, upsertWalletActivityRecords } from '@/lib/store'
+import { getQuidPageAliasesForAddresses, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, upsertWalletActivityRecords } from '@/lib/store'
 
 const transferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 const zeroAddress = '0x0000000000000000000000000000000000000000'
@@ -208,9 +208,13 @@ export async function POST() {
     // Show only indexed transfers and Quid-recorded operations in activity.
     const activities = (await listWalletActivityForOwner(user.id, 30))
       .filter((activity) => !isSyntheticBalanceRecord(activity))
+    const addressAliases = await getQuidPageAliasesForAddresses(
+      activities.flatMap((activity) => [activity.fromAddress, activity.toAddress])
+    )
 
     return NextResponse.json({
       activities,
+      addressAliases,
       synced: records.length,
       warning: warnings.length ? warnings.join('; ') : null
     })

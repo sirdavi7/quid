@@ -6,6 +6,7 @@ import { ARC_TESTNET_ID } from '@/lib/arc'
 import { chainOptions } from '@/lib/chains'
 import { getFriendlyUserError } from '@/lib/user-errors'
 import { UsdcAmountInput, UsdcMark } from '@/components/usdc-mark'
+import { PaymentStatusCard } from '@/components/payment-status-card'
 
 function formatBalance(value) {
   const amount = Number(value ?? 0)
@@ -22,6 +23,19 @@ function formatBalance(value) {
 
 function friendlyPanelError(error, options) {
   return getFriendlyUserError(error, options)
+}
+
+function previewConfirmationMessage(action, preview, amount, source, destination) {
+  const actionLabel = action === 'deposit' ? 'Deposit to Gateway' : action === 'send' ? 'Withdraw Gateway USDC' : 'Withdraw received USDC'
+  const route = action === 'send' ? `${source.label} to ${destination.label}` : preview.network
+  const fees = preview.feeLines?.length ? preview.feeLines.join('\n') : 'No additional fee was quoted.'
+
+  return [
+    `${actionLabel}: ${amount} USDC`,
+    `Network: ${route}`,
+    `Estimated fee:\n${fees}`,
+    preview.detail
+  ].join('\n\n')
 }
 function GatewayBalancesByWallet({ items }) {
   if (!items) {
@@ -93,6 +107,8 @@ export function CreatorWalletPanel({ page }) {
   const [receivedBalance, setReceivedBalance] = useState(null)
   const [gatewayBalances, setGatewayBalances] = useState(null)
   const [sendResult, setSendResult] = useState('')
+  const [transaction, setTransaction] = useState(null)
+  const [feePreview, setFeePreview] = useState(null)
   const [error, setError] = useState('')
   const [pendingAction, setPendingAction] = useState('')
   const isBusy = Boolean(pendingAction)
@@ -101,6 +117,29 @@ export function CreatorWalletPanel({ page }) {
   const canWithdrawDirectly = selectedSource.id === ARC_TESTNET_ID
   const selectedWallet = wallets.find((wallet) => wallet.chainId === selectedSource.id)
   const selectedWalletAddress = selectedWallet?.walletAddress ?? (canWithdrawDirectly ? page.walletAddress : '')
+
+  async function loadTransactionPreview(action) {
+    const response = await fetch('/api/transaction-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action,
+        recipientAddress,
+        amount,
+        sourceChainId: selectedSource.id,
+        destinationChainId: selectedDestination.id
+      })
+    })
+    const payload = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(payload.error ?? 'Quid could not retrieve a live network fee quote.')
+    }
+
+    setFeePreview(payload)
+    await new Promise((resolve) => window.requestAnimationFrame(resolve))
+    return payload
+  }
 
   async function ensureChainWallets() {
     setError('')
@@ -165,6 +204,8 @@ export function CreatorWalletPanel({ page }) {
       setGatewayBalances(null)
     } else {
       setSendResult('')
+      setTransaction(null)
+      setFeePreview(null)
     }
 
     try {
@@ -172,12 +213,12 @@ export function CreatorWalletPanel({ page }) {
         throw new Error(`Set up a ${selectedSource.label} wallet for this Quid page first.`)
       }
 
-      if (action === 'deposit' && !window.confirm(`Deposit ${amount} USDC from the ${selectedSource.label} receive wallet into its Gateway balance?`)) {
-        return
-      }
+      if (action === 'deposit' || action === 'send') {
+        const preview = await loadTransactionPreview(action)
 
-      if (action === 'send' && !window.confirm(`Withdraw ${amount} USDC from the ${selectedSource.label} Gateway balance to the recipient address on ${selectedDestination.label}?`)) {
-        return
+        if (!window.confirm(previewConfirmationMessage(action, preview, amount, selectedSource, selectedDestination))) {
+          return
+        }
       }
 
       const response = await fetch('/api/unified-balance', {
@@ -200,10 +241,11 @@ export function CreatorWalletPanel({ page }) {
 
       if (action === 'balances') {
         setGatewayBalances(payload.walletBalances ?? [])
-      } else if (action === 'deposit') {
-        setSendResult(payload.result?.explorerUrl ? `Gateway deposit submitted: ${payload.result.explorerUrl}` : `${amount} USDC was deposited from ${selectedSource.label} into its Gateway balance.`)
       } else {
-        setSendResult(payload.result?.explorerUrl ? `Gateway withdrawal submitted: ${payload.result.explorerUrl}` : `Gateway withdrawal submitted from ${selectedSource.label} to ${selectedDestination.label}.`)
+        setTransaction(payload.payment ?? null)
+        if (!payload.payment) {
+          setSendResult(action === 'deposit' ? 'Gateway deposit was submitted.' : 'Gateway withdrawal was submitted.')
+        }
       }
     } catch (requestError) {
       setError(friendlyPanelError(requestError, {
@@ -220,11 +262,19 @@ export function CreatorWalletPanel({ page }) {
   async function withdrawReceivedUsdc() {
     setError('')
     setSendResult('')
+    setTransaction(null)
+    setFeePreview(null)
     setPendingAction('withdraw')
 
     try {
       if (!canWithdrawDirectly) {
         throw new Error(`${selectedSource.label} received-wallet withdrawals need Gateway routing before Quid can move those funds. Check the Gateway pooled balance or use Arc Testnet for direct withdrawal.`)
+      }
+
+      const preview = await loadTransactionPreview('withdraw')
+
+      if (!window.confirm(previewConfirmationMessage('withdraw', preview, amount, selectedSource, selectedDestination))) {
+        return
       }
 
       const response = await fetch('/api/payouts', {
@@ -241,7 +291,10 @@ export function CreatorWalletPanel({ page }) {
         throw new Error(payload.error ?? 'Withdrawal request failed.')
       }
 
-      setSendResult(payload.result?.id ? `Withdrawal submitted. Circle transaction ID: ${payload.result.id}` : 'Withdrawal submitted from your received USDC wallet.')
+      setTransaction(payload.payment ?? null)
+      if (!payload.payment) {
+        setSendResult('Withdrawal was submitted from your received USDC wallet.')
+      }
     } catch (requestError) {
       setError(friendlyPanelError(requestError, { fallback: 'We could not submit this Arc withdrawal. Check the recipient and wallet balance, then try again.' }))
     } finally {
@@ -262,7 +315,10 @@ export function CreatorWalletPanel({ page }) {
             Recipient address
             <input
               value={recipientAddress}
-              onChange={(event) => setRecipientAddress(event.target.value)}
+              onChange={(event) => {
+                setRecipientAddress(event.target.value)
+                setFeePreview(null)
+              }}
               className="h-11 rounded-md border border-ink/15 px-3 normal-case outline-none focus:border-arc"
               placeholder="Recipient address"
             />
@@ -276,6 +332,8 @@ export function CreatorWalletPanel({ page }) {
                 setSelectedSourceId(event.target.value)
                 setReceivedBalance(null)
                 setSendResult('')
+                setTransaction(null)
+                setFeePreview(null)
                 setError('')
               }}
               className="h-11 rounded-md border border-ink/15 px-3 text-sm font-semibold normal-case outline-none focus:border-arc"
@@ -291,7 +349,10 @@ export function CreatorWalletPanel({ page }) {
             Gateway destination
             <select
               value={selectedDestinationId}
-              onChange={(event) => setSelectedDestinationId(event.target.value)}
+              onChange={(event) => {
+                setSelectedDestinationId(event.target.value)
+                setFeePreview(null)
+              }}
               aria-label="Gateway withdrawal destination chain"
               className="h-11 rounded-md border border-ink/15 bg-white px-3 text-sm font-semibold normal-case text-ink outline-none focus:border-arc"
             >
@@ -304,7 +365,10 @@ export function CreatorWalletPanel({ page }) {
             <span>Amount</span>
             <UsdcAmountInput
               value={amount}
-              onChange={(event) => setAmount(event.target.value)}
+              onChange={(event) => {
+                setAmount(event.target.value)
+                setFeePreview(null)
+              }}
               className="h-11 rounded-md border border-ink/15 px-3 normal-case outline-none focus:border-arc"
               inputMode="decimal"
             />
@@ -421,6 +485,23 @@ export function CreatorWalletPanel({ page }) {
 
         <ReceivedWalletBalance result={receivedBalance} />
         <GatewayBalancesByWallet items={gatewayBalances} />
+
+        {feePreview ? (
+          <div className="mt-4 rounded-md border border-arc/20 bg-haze p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-black uppercase text-arc">Network and fee</p>
+              <p className="text-xs font-bold text-ink/55">{feePreview.network} · Gas: {feePreview.gasAsset}</p>
+            </div>
+            <div className="mt-2 grid gap-1 text-sm font-black text-ink">
+              {feePreview.feeLines?.length ? feePreview.feeLines.map((line) => <p key={line}>{line}</p>) : <p>No additional fee was quoted.</p>}
+            </div>
+            <p className="mt-2 text-xs leading-5 text-ink/60">{feePreview.detail}</p>
+          </div>
+        ) : null}
+
+        <div className="mt-4">
+          <PaymentStatusCard initialPayment={transaction} />
+        </div>
 
         {sendResult ? (
           <p className="mt-4 break-words rounded-md border border-arc/20 bg-haze px-3 py-2 text-sm font-semibold text-ink">

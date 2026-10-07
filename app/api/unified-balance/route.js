@@ -1,20 +1,12 @@
 import { NextResponse } from 'next/server'
-import { createPublicClient, decodeEventLog, http, parseAbiItem } from 'viem'
-import { ARC_EXPLORER_URL, ARC_TESTNET_CHAIN, ARC_USDC_ADDRESS, arcTestnet } from '@/lib/arc'
 import { chainOptions } from '@/lib/chains'
-import { GATEWAY_WALLET_EVM_TESTNET, depositCircleWalletUsdcToGateway } from '@/lib/circleWallets'
-import { createPaymentRecord, getPageForOwner, getWalletForPageChain, listWalletsForPage, upsertWalletActivityRecords } from '@/lib/store'
+import { GATEWAY_WALLET_EVM_TESTNET, getExplorerUrlForChain, submitCircleWalletUsdcToGateway } from '@/lib/circleWallets'
+import { createPaymentRecord, getPageForOwner, getWalletForPageChain, listWalletsForPage } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createCircleWalletsUnifiedAdapter, createServerUnifiedBalanceKit } from '@/lib/unifiedBalance'
 import { getOnchainActionBlockMessage } from '@/lib/runtime-network'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
 import { validateAddress, validateAmount } from '@/lib/validation'
-
-const arcClient = createPublicClient({
-  chain: arcTestnet,
-  transport: http(arcTestnet.rpcUrls.default.http[0])
-})
-const transferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 
 function getSourceChain(chainId) {
   return chainOptions.find((option) => option.id === Number(chainId)) ?? chainOptions[0]
@@ -22,53 +14,6 @@ function getSourceChain(chainId) {
 
 function getResultHash(result) {
   return result?.txHash ?? result?.transactionHash ?? result?.hash ?? result?.transferId
-}
-
-function normalizeAddress(address) {
-  return String(address ?? '').toLowerCase()
-}
-
-async function getGatewayWithdrawalTransfer(txHash, recipientAddress) {
-  if (!String(txHash ?? '').startsWith('0x')) {
-    return null
-  }
-
-  try {
-    const receipt = await arcClient.getTransactionReceipt({ hash: txHash })
-    const transfer = receipt.logs
-      .filter((log) => normalizeAddress(log.address) === normalizeAddress(ARC_USDC_ADDRESS))
-      .map((log) => {
-        try {
-          return decodeEventLog({
-            abi: [transferEvent],
-            data: log.data,
-            topics: log.topics
-          })
-        } catch {
-          return null
-        }
-      })
-      .find((event) => (
-        event?.eventName === 'Transfer' &&
-        normalizeAddress(event.args.to) === normalizeAddress(recipientAddress)
-      ))
-
-    if (!transfer) {
-      return null
-    }
-
-    const block = await arcClient.getBlock({ blockNumber: receipt.blockNumber })
-
-    return {
-      fromAddress: transfer.args.from,
-      toAddress: transfer.args.to,
-      blockNumber: receipt.blockNumber.toString(),
-      happenedAt: new Date(Number(block.timestamp) * 1000).toISOString()
-    }
-  } catch (error) {
-    logServerError('Gateway withdrawal transaction lookup', error)
-    return null
-  }
 }
 
 function isRetryableRpcError(error) {
@@ -204,52 +149,32 @@ export async function POST(request) {
         return NextResponse.json({ error: `Set up the ${source.label} receive wallet before depositing to Gateway.` }, { status: 400 })
       }
 
-      const result = await depositCircleWalletUsdcToGateway({
+      const result = await submitCircleWalletUsdcToGateway({
         walletId: sourceWallet.walletId,
         chainId: source.id,
         usdcAddress: source.usdcAddress,
         amount
       })
       const txHash = getResultHash(result)
-      const explorerUrl = result?.explorerUrl ?? null
-      const recordResults = await Promise.allSettled([
-        createPaymentRecord({
-          pageUsername: page.username,
-          payerAddress: sourceAddress,
-          recipientAddress: GATEWAY_WALLET_EVM_TESTNET,
-          amount,
-          sourceChain: source.label,
-          destinationChain: source.label,
-          txHash,
-          explorerUrl,
-          status: 'confirmed',
-          kind: 'outgoing',
-          note: 'Gateway deposit'
-        }),
-        upsertWalletActivityRecords([{
-          pageId: page.id,
-          ownerId: page.ownerId,
-          pageUsername: page.username,
-          walletAddress: sourceAddress,
-          fromAddress: sourceAddress,
-          toAddress: GATEWAY_WALLET_EVM_TESTNET,
-          amount,
-          asset: 'USDC',
-          chain: source.label,
-          txHash,
-          explorerUrl,
-          source: 'Gateway deposit',
-          blockNumber: result?.blockNumber ?? null
-        }])
-      ])
-
-      recordResults.forEach((recordResult, index) => {
-        if (recordResult.status === 'rejected') {
-          logServerError(index === 0 ? 'Gateway deposit payment record' : 'Gateway deposit activity record', recordResult.reason)
-        }
+      const explorerUrl = result?.explorerUrl ?? getExplorerUrlForChain(source.id, txHash)
+      const payment = await createPaymentRecord({
+        pageUsername: page.username,
+        payerAddress: sourceAddress,
+        recipientAddress: GATEWAY_WALLET_EVM_TESTNET,
+        amount,
+        sourceChain: source.label,
+        destinationChain: source.label,
+        txHash,
+        explorerUrl,
+        circleTransactionId: result.id,
+        circleState: result.state ?? 'INITIATED',
+        status: 'submitted',
+        kind: 'outgoing',
+        operation: 'gateway-deposit',
+        note: 'Gateway deposit'
       })
 
-      return NextResponse.json({ result, source, payment: recordResults[0].status === 'fulfilled' ? recordResults[0].value : null })
+      return NextResponse.json({ result, source, payment })
     }
 
     if (action === 'send') {
@@ -292,44 +217,24 @@ export async function POST(request) {
         throw new Error('Circle did not return the destination transaction hash for this Gateway withdrawal.')
       }
 
-      const explorerUrl = result?.explorerUrl ?? (destination.gatewayName === ARC_TESTNET_CHAIN ? `${ARC_EXPLORER_URL}/tx/${txHash}` : null)
-      const transfer = destination.gatewayName === ARC_TESTNET_CHAIN
-        ? await getGatewayWithdrawalTransfer(txHash, recipientAddress)
-        : null
+      const explorerUrl = result?.explorerUrl ?? getExplorerUrlForChain(destination.id, txHash)
+      const payment = await createPaymentRecord({
+        pageUsername: page.username,
+        payerAddress: sourceAddress,
+        recipientAddress,
+        amount,
+        sourceChain: source.label,
+        destinationChain: destination.label,
+        txHash,
+        explorerUrl,
+        gatewayTransferId: result?.transferId ?? null,
+        status: 'submitted',
+        kind: 'outgoing',
+        operation: 'gateway-withdrawal',
+        note: 'Gateway withdrawal'
+      })
 
-      await Promise.all([
-        createPaymentRecord({
-          pageUsername: page.username,
-          payerAddress: sourceAddress,
-          recipientAddress,
-          amount,
-          sourceChain: source.label,
-          destinationChain: destination.label,
-          txHash,
-          explorerUrl,
-          status: 'confirmed',
-          kind: 'outgoing',
-          note: 'Gateway withdrawal'
-        }),
-        upsertWalletActivityRecords([{
-          pageId: page.id,
-          ownerId: page.ownerId,
-          pageUsername: page.username,
-          walletAddress: sourceAddress,
-          fromAddress: transfer?.fromAddress ?? null,
-          toAddress: transfer?.toAddress ?? recipientAddress,
-          amount,
-          asset: 'USDC',
-          chain: destination.label,
-          txHash,
-          explorerUrl,
-          source: `Gateway withdrawal from ${source.label} to ${destination.label}`,
-          blockNumber: transfer?.blockNumber ?? result?.blockNumber ?? null,
-          happenedAt: transfer?.happenedAt
-        }])
-      ])
-
-      return NextResponse.json({ result, source })
+      return NextResponse.json({ result, source, payment })
     }
 
     return NextResponse.json({ error: 'Unsupported Unified Balance action.' }, { status: 400 })

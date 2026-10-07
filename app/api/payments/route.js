@@ -22,6 +22,15 @@ export async function POST(request) {
     }
 
     const kind = body.kind === 'outgoing' ? 'outgoing' : 'incoming'
+    const outgoingOperations = new Set([
+      'connected-wallet-send',
+      'direct-withdrawal',
+      'gateway-deposit',
+      'gateway-withdrawal'
+    ])
+    const operation = kind === 'outgoing' && outgoingOperations.has(body.operation)
+      ? body.operation
+      : 'checkout'
 
     if (kind === 'outgoing') {
       if (!body.recipientAddress || !isAddress(body.recipientAddress)) {
@@ -43,9 +52,10 @@ export async function POST(request) {
       recipientAddress: kind === 'outgoing' ? body.recipientAddress : undefined,
       amount,
       sourceChain: body.sourceChain,
-      destinationChain: 'Arc Testnet',
+      destinationChain: body.destinationChain ?? 'Arc Testnet',
       txHash: body.txHash,
       explorerUrl: body.explorerUrl,
+      operation,
       status: 'submitted',
       kind,
       note: body.note
