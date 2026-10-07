@@ -16,6 +16,10 @@ function getResultHash(result) {
   return result?.txHash ?? result?.transactionHash ?? result?.hash ?? result?.transferId
 }
 
+function normalizeAddress(value) {
+  return String(value ?? '').trim().toLowerCase()
+}
+
 function isRetryableRpcError(error) {
   const message = String(error?.message ?? error ?? '').toLowerCase()
 
