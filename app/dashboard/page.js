@@ -133,7 +133,7 @@ export default async function DashboardPage() {
   return (
     <>
       <main className="min-h-screen bg-paper">
-        <TransactionStatusSync hasSubmittedPayments={payments.some((payment) => payment.status === 'submitted')} />
+        <TransactionStatusSync ownerId={user.id} hasSubmittedPayments={payments.some((payment) => payment.status === 'submitted')} />
         <AppHeader>
           <HomeNavButton />
           <DashboardNavMenu username={primaryPage?.username} />

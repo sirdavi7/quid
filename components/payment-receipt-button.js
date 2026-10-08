@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ExternalLink, ReceiptText, X } from 'lucide-react'
 import { formatQuidTimestamp } from '@/lib/date-time'
 import { addressOrQuidPageLabel } from '@/lib/address-aliases'
@@ -78,6 +79,11 @@ function statusLabel(status) {
 
 export function PaymentReceiptButton({ payment, explorerUrl, addressAliases = {} }) {
   const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   const rows = [
     ['Type', paymentType(payment)],
     ['Amount', formatUsdc(payment.amount)],
@@ -106,7 +112,7 @@ export function PaymentReceiptButton({ payment, explorerUrl, addressAliases = {}
         <ReceiptText size={13} /> Receipt
       </button>
 
-      {open ? (
+      {open && mounted ? createPortal(
         <div className="fixed inset-0 z-[70] grid place-items-center overflow-y-auto bg-night/55 p-4 backdrop-blur-sm">
           <div
             role="dialog"
@@ -167,7 +173,7 @@ export function PaymentReceiptButton({ payment, explorerUrl, addressAliases = {}
             ) : null}
           </div>
         </div>
-      ) : null}
+      , document.body) : null}
     </>
   )
 }

@@ -6,7 +6,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 const POLL_INTERVAL_MS = 5000
 
-export function TransactionStatusSync({ hasSubmittedPayments = false }) {
+export function TransactionStatusSync({ hasSubmittedPayments = false, ownerId }) {
   const router = useRouter()
 
   useEffect(() => {
@@ -35,6 +35,10 @@ export function TransactionStatusSync({ hasSubmittedPayments = false }) {
       }
     }
 
+    if (!hasSubmittedPayments || !ownerId) {
+      return undefined
+    }
+
     reconcile()
     const interval = window.setInterval(reconcile, POLL_INTERVAL_MS)
 
@@ -44,7 +48,7 @@ export function TransactionStatusSync({ hasSubmittedPayments = false }) {
         .channel('quid-payment-statuses')
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'quid_payments' },
+          { event: 'UPDATE', schema: 'public', table: 'quid_payments', filter: `owner_id=eq.${ownerId}` },
           () => router.refresh()
         )
         .subscribe()
@@ -60,7 +64,7 @@ export function TransactionStatusSync({ hasSubmittedPayments = false }) {
         channel.unsubscribe()
       }
     }
-  }, [hasSubmittedPayments, router])
+  }, [hasSubmittedPayments, ownerId, router])
 
   return null
 }

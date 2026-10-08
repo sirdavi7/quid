@@ -326,7 +326,7 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
           <select
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value)}
-            className="h-11 rounded-md border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition focus:border-arc focus:ring-4 focus:ring-arc/10"
+            className="h-11 rounded-md border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition-[border-color,box-shadow] focus:border-arc focus:ring-4 focus:ring-arc/10"
           >
             <option>All types</option>
             <option>Receive</option>
@@ -339,7 +339,7 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
           <select
             value={tokenFilter}
             onChange={(event) => setTokenFilter(event.target.value)}
-            className="h-11 rounded-md border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition focus:border-arc focus:ring-4 focus:ring-arc/10"
+            className="h-11 rounded-md border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition-[border-color,box-shadow] focus:border-arc focus:ring-4 focus:ring-arc/10"
           >
             <option>All tokens</option>
             {tokens.map((token) => (
@@ -353,7 +353,7 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
           <select
             value={chainFilter}
             onChange={(event) => setChainFilter(event.target.value)}
-            className="h-11 rounded-md border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition focus:border-arc focus:ring-4 focus:ring-arc/10"
+            className="h-11 rounded-md border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition-[border-color,box-shadow] focus:border-arc focus:ring-4 focus:ring-arc/10"
           >
             <option>All chains</option>
             {chains.map((chain) => (
@@ -392,7 +392,7 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
             return (
               <article
                 key={`${activity.txHash}-${activity.blockNumber}`}
-                className="rounded-lg border border-arc/15 bg-white p-4 shadow-[0_12px_34px_rgba(109,53,242,0.08)] transition hover:-translate-y-0.5"
+                className="rounded-lg border border-arc/15 bg-white p-4 shadow-[0_12px_34px_rgba(109,53,242,0.08)] transition-transform hover:-translate-y-0.5"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full border border-ink/10 bg-haze px-3 py-1 text-xs font-black text-ink/55">
