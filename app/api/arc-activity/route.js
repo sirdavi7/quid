@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createPublicClient, formatUnits, http, parseAbiItem } from 'viem'
 import { arcTestnet, ARC_EXPLORER_URL, ARC_TESTNET_ID } from '@/lib/arc'
 import { chains, chainOptions } from '@/lib/chains'
+import { getServerRpcUrl } from '@/lib/server-rpc'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
 import { getQuidPageAliasesForAddresses, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, upsertWalletActivityRecords } from '@/lib/store'
@@ -9,25 +10,19 @@ import { getQuidPageAliasesForAddresses, listPagesForOwner, listPaymentsForOwner
 const transferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 const zeroAddress = '0x0000000000000000000000000000000000000000'
 
-const client = createPublicClient({
-  chain: arcTestnet,
-  transport: http(arcTestnet.rpcUrls.default.http[0])
-})
-
 function createChainClient(option) {
-  const chain = chains.find((item) => item.id === option.id)
+  const chain = option.id === ARC_TESTNET_ID
+    ? arcTestnet
+    : chains.find((item) => item.id === option.id)
+  const rpcUrl = getServerRpcUrl(option.id)
 
-  if (option.id === ARC_TESTNET_ID) {
-    return client
-  }
-
-  if (!chain?.rpcUrls?.default?.http?.[0]) {
+  if (!chain || !rpcUrl) {
     throw new Error(`${option.label} RPC is not configured.`)
   }
 
   return createPublicClient({
     chain,
-    transport: http(chain.rpcUrls.default.http[0])
+    transport: http(rpcUrl)
   })
 }
 

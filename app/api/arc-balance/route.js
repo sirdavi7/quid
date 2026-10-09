@@ -1,12 +1,13 @@
 ﻿import { NextResponse } from 'next/server'
 import { createPublicClient, formatUnits, http } from 'viem'
-import { arcTestnet, ARC_USDC_ADDRESS, usdcAbi } from '@/lib/arc'
+import { arcTestnet, ARC_TESTNET_ID, ARC_USDC_ADDRESS, usdcAbi } from '@/lib/arc'
+import { getServerRpcUrl } from '@/lib/server-rpc'
 import { validateAddress } from '@/lib/validation'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
 const client = createPublicClient({
   chain: arcTestnet,
-  transport: http(arcTestnet.rpcUrls.default.http[0])
+  transport: http(getServerRpcUrl(ARC_TESTNET_ID))
 })
 
 export async function POST(request) {

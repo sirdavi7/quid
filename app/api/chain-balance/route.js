@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createPublicClient, formatUnits, http } from 'viem'
 import { chains, chainOptions } from '@/lib/chains'
 import { usdcAbi } from '@/lib/arc'
+import { getServerRpcUrl } from '@/lib/server-rpc'
 import { validateAddress } from '@/lib/validation'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
@@ -17,13 +18,19 @@ export async function POST(request) {
       return NextResponse.json({ error: 'A valid wallet address is required.' }, { status: 400 })
     }
 
-    if (!option || !chain?.rpcUrls?.default?.http?.[0] || !option.usdcAddress) {
+    if (!option || !chain || !option.usdcAddress) {
       return NextResponse.json({ error: 'Choose a supported USDC test chain.' }, { status: 400 })
+    }
+
+    const rpcUrl = getServerRpcUrl(option.id)
+
+    if (!rpcUrl) {
+      return NextResponse.json({ error: `${option.label} network access is not configured.` }, { status: 503 })
     }
 
     const client = createPublicClient({
       chain,
-      transport: http(chain.rpcUrls.default.http[0])
+      transport: http(rpcUrl)
     })
 
     const rawBalance = await client.readContract({
