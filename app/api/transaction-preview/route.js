@@ -21,6 +21,34 @@ function formatFeeLine(label, amount, asset) {
     : `${label}: ${amount} ${asset}`
 }
 
+function createFeeItem(label, amount, asset) {
+  return amount === undefined || amount === null || amount === ''
+    ? null
+    : { label, amount: String(amount), asset }
+}
+
+function feeLinesFromItems(items) {
+  return items.map((item) => formatFeeLine(item.label, item.amount, item.asset)).filter(Boolean)
+}
+
+function gatewayFeeLabel(value) {
+  const rawLabel = String(value ?? '').trim()
+
+  if (!rawLabel) {
+    return 'Gateway route fee'
+  }
+
+  const readable = rawLabel
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const capitalized = `${readable.charAt(0).toUpperCase()}${readable.slice(1)}`
+
+  return /fee/i.test(capitalized) ? capitalized : `${capitalized} fee`
+}
+
 export async function POST(request) {
   let body = null
 
@@ -70,10 +98,11 @@ export async function POST(request) {
         usdcAddress: source.usdcAddress,
         amount
       })
-      const feeLines = [
-        formatFeeLine('Approval', fees.approval, source.nativeSymbol),
-        formatFeeLine('Gateway deposit', fees.deposit, source.nativeSymbol)
+      const feeItems = [
+        createFeeItem('Approval network fee', fees.approval, source.nativeSymbol),
+        createFeeItem('Gateway deposit network fee', fees.deposit, source.nativeSymbol)
       ].filter(Boolean)
+      const feeLines = feeLinesFromItems(feeItems)
 
       if (!feeLines.length) {
         throw new Error('Circle did not return a live network fee quote for this Gateway deposit.')
@@ -82,6 +111,7 @@ export async function POST(request) {
       return NextResponse.json({
         network: source.label,
         gasAsset: source.nativeSymbol,
+        feeItems,
         feeLines,
         detail: source.id === chainOptions[0].id
           ? 'Arc uses USDC for both network fees and the deposit amount.'
@@ -108,10 +138,13 @@ export async function POST(request) {
         throw new Error('Circle did not return a live network fee quote for this withdrawal.')
       }
 
+      const feeItems = [createFeeItem('Network fee', fee, 'USDC')].filter(Boolean)
+
       return NextResponse.json({
         network: 'Arc Testnet',
         gasAsset: 'USDC',
-        feeLines: [formatFeeLine('Network fee', fee, 'USDC')].filter(Boolean),
+        feeItems,
+        feeLines: feeLinesFromItems(feeItems),
         detail: 'Arc uses USDC for network gas. The fee is separate from the withdrawal amount.'
       })
     }
@@ -143,13 +176,16 @@ export async function POST(request) {
         },
         amount
       })
-      const feeLines = (estimate?.fees ?? [])
+      const feeItems = (estimate?.fees ?? [])
         .filter((fee) => fee?.amount !== undefined && fee?.token)
-        .map((fee) => `${String(fee.type ?? 'Gateway fee')}: ${fee.amount} ${fee.token}`)
+        .map((fee) => createFeeItem(gatewayFeeLabel(fee.type), fee.amount, fee.token))
+        .filter(Boolean)
+      const feeLines = feeLinesFromItems(feeItems)
 
       return NextResponse.json({
         network: `${source.label} to ${destination.label}`,
         gasAsset: source.nativeSymbol,
+        feeItems,
         feeLines,
         detail: feeLines.length
           ? 'Gateway quoted these fees for the selected route before the withdrawal is submitted.'

@@ -18,6 +18,7 @@ import {
 import { ARC_TESTNET_CHAIN, ARC_TESTNET_ID, ARC_USDC_ADDRESS, usdcAbi } from '@/lib/arc'
 import { chainOptions } from '@/lib/chains'
 import { getFriendlyUserError } from '@/lib/user-errors'
+import { NetworkFeeSummary } from '@/components/network-fee-summary'
 import { UsdcAmountInput, UsdcMark } from '@/components/usdc-mark'
 import { PaymentStatusCard } from '@/components/payment-status-card'
 
@@ -72,14 +73,40 @@ function formatFeeAmount(value) {
 
   return amount.toLocaleString(undefined, {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 6
+    maximumFractionDigits: 15
   })
 }
 
-function quoteLines(fees = []) {
+function gatewayFeeLabel(value) {
+  const rawLabel = String(value ?? '').trim()
+
+  if (!rawLabel) {
+    return 'Gateway route fee'
+  }
+
+  const readable = rawLabel
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const capitalized = `${readable.charAt(0).toUpperCase()}${readable.slice(1)}`
+
+  return /fee/i.test(capitalized) ? capitalized : `${capitalized} fee`
+}
+
+function quoteFeeItems(fees = []) {
   return fees
     .filter((fee) => fee?.amount !== undefined && fee?.token)
-    .map((fee) => `${String(fee.type ?? 'Gateway fee')}: ${formatFeeAmount(fee.amount)} ${fee.token}`)
+    .map((fee) => ({
+      label: gatewayFeeLabel(fee.type),
+      amount: formatFeeAmount(fee.amount),
+      asset: fee.token
+    }))
+}
+
+function feeLinesFromItems(items) {
+  return items.map((item) => `${item.label}: ${item.amount} ${item.asset}`)
 }
 
 export function PayActions({ page, isOwner = false, initialAmount, initialChain }) {
@@ -249,10 +276,17 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       arcPublicClient.getGasPrice()
     ])
 
+    const feeItems = [{
+      label: 'Network fee',
+      amount: formatFeeAmount(formatUnits(gas * gasPrice, 18)),
+      asset: 'USDC'
+    }]
+
     return {
       network: 'Arc Testnet',
       gasAsset: 'USDC',
-      feeLines: [`${formatFeeAmount(formatUnits(gas * gasPrice, 18))} USDC`],
+      feeItems,
+      feeLines: feeLinesFromItems(feeItems),
       detail: 'Arc uses USDC for network gas. This fee is separate from the payment amount.'
     }
   }
@@ -270,13 +304,14 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       },
       amount
     })
-    const lines = quoteLines(result?.fees)
+    const feeItems = quoteFeeItems(result?.fees)
 
     return {
       network: selected.label,
       gasAsset: selected.nativeSymbol,
-      feeLines: lines.length ? lines : ['No additional Gateway fee'],
-      detail: lines.length
+      feeItems,
+      feeLines: feeItems.length ? feeLinesFromItems(feeItems) : ['No additional Gateway fee'],
+      detail: feeItems.length
         ? `${selected.nativeSymbol} is required by ${selected.label} for network gas.`
         : 'Gateway did not quote an additional route fee for this payment.'
     }
@@ -576,31 +611,29 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
           </label>
         </div>
 
-        <div className="mt-4 rounded-md border border-arc/15 bg-haze/70 px-3 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-black uppercase text-arc">Network and fee</p>
-            <p className="text-xs font-bold text-ink/55">
-              {feePreview.network ?? selectedSource.label} · Gas: {feePreview.gasAsset ?? (isArcSource ? 'USDC' : selectedSource.nativeSymbol)}
-            </p>
+        {feePreview.state === 'ready' ? (
+          <NetworkFeeSummary className="mt-4" quote={feePreview} amount={payForm.amount} amountLabel="Payment amount" />
+        ) : (
+          <div className="mt-4 rounded-md border border-arc/15 bg-haze/70 px-3 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-black uppercase text-arc">Network and fee</p>
+              <p className="text-xs font-bold text-ink/55">
+                {feePreview.network ?? selectedSource.label} · Gas: {feePreview.gasAsset ?? (isArcSource ? 'USDC' : selectedSource.nativeSymbol)}
+              </p>
+            </div>
+            {feePreview.state === 'loading' ? (
+              <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-ink/60">
+                <Loader2 size={15} className="animate-spin" /> Checking live fee quote
+              </p>
+            ) : null}
+            {['network-needed', 'unavailable'].includes(feePreview.state) ? (
+              <p className="mt-2 text-xs leading-5 text-ink/60">{feePreview.detail}</p>
+            ) : null}
+            {feePreview.state === 'idle' ? (
+              <p className="mt-2 text-xs leading-5 text-ink/60">Connect a wallet and enter an amount to load the current fee.</p>
+            ) : null}
           </div>
-          {feePreview.state === 'loading' ? (
-            <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-ink/60">
-              <Loader2 size={15} className="animate-spin" /> Checking live fee quote
-            </p>
-          ) : null}
-          {feePreview.state === 'ready' ? (
-            <>
-              <p className="mt-2 text-sm font-black text-ink">Estimated fee: {feePreview.feeLines.join(' + ')}</p>
-              <p className="mt-1 text-xs leading-5 text-ink/60">{feePreview.detail}</p>
-            </>
-          ) : null}
-          {['network-needed', 'unavailable'].includes(feePreview.state) ? (
-            <p className="mt-2 text-xs leading-5 text-ink/60">{feePreview.detail}</p>
-          ) : null}
-          {feePreview.state === 'idle' ? (
-            <p className="mt-2 text-xs leading-5 text-ink/60">Connect a wallet and enter an amount to load the current fee.</p>
-          ) : null}
-        </div>
+        )}
 
         <button
           disabled={isBusy}

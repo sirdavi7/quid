@@ -5,6 +5,7 @@ import { AlertCircle, Database, Loader2, RefreshCw, Send, WalletCards } from 'lu
 import { ARC_TESTNET_ID } from '@/lib/arc'
 import { chainOptions } from '@/lib/chains'
 import { getFriendlyUserError } from '@/lib/user-errors'
+import { NetworkFeeSummary } from '@/components/network-fee-summary'
 import { UsdcAmountInput, UsdcMark } from '@/components/usdc-mark'
 import { PaymentStatusCard } from '@/components/payment-status-card'
 
@@ -136,7 +137,7 @@ export function CreatorWalletPanel({ page }) {
       throw new Error(payload.error ?? 'Quid could not retrieve a live network fee quote.')
     }
 
-    setFeePreview(payload)
+    setFeePreview({ ...payload, action })
     await new Promise((resolve) => window.requestAnimationFrame(resolve))
     return payload
   }
@@ -411,7 +412,7 @@ export function CreatorWalletPanel({ page }) {
                   className="quid-secondary-action h-11 w-full px-4 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-panel"
                 >
                   {pendingAction === 'received-balance' ? <Loader2 size={17} className="animate-spin" /> : null}
-                  Check receive wallet
+                  Check {selectedSource.label} wallet
                 </button>
                 <button
                   type="button"
@@ -487,16 +488,18 @@ export function CreatorWalletPanel({ page }) {
         <GatewayBalancesByWallet items={gatewayBalances} />
 
         {feePreview ? (
-          <div className="mt-4 rounded-md border border-arc/20 bg-haze p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs font-black uppercase text-arc">Network and fee</p>
-              <p className="text-xs font-bold text-ink/55">{feePreview.network} · Gas: {feePreview.gasAsset}</p>
-            </div>
-            <div className="mt-2 grid gap-1 text-sm font-black text-ink">
-              {feePreview.feeLines?.length ? feePreview.feeLines.map((line) => <p key={line}>{line}</p>) : <p>No additional fee was quoted.</p>}
-            </div>
-            <p className="mt-2 text-xs leading-5 text-ink/60">{feePreview.detail}</p>
-          </div>
+          <NetworkFeeSummary
+            className="mt-4"
+            quote={feePreview}
+            amount={amount}
+            amountLabel={
+              feePreview.action === 'deposit'
+                ? 'Gateway deposit amount'
+                : feePreview.action === 'send'
+                  ? 'Gateway withdrawal amount'
+                  : 'Withdrawal amount'
+            }
+          />
         ) : null}
 
         <div className="mt-4">
