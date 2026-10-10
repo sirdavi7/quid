@@ -277,17 +277,19 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     ])
 
     const feeItems = [{
-      label: 'Network fee',
+      label: 'Network gas estimate',
       amount: formatFeeAmount(formatUnits(gas * gasPrice, 18)),
       asset: 'USDC'
     }]
 
     return {
       network: 'Arc Testnet',
+      feeMode: 'native',
+      feeAsset: 'USDC',
       gasAsset: 'USDC',
       feeItems,
       feeLines: feeLinesFromItems(feeItems),
-      detail: 'Arc uses USDC for network gas. This fee is separate from the payment amount.'
+      detail: 'Arc uses USDC for network gas. This is an estimate and is separate from the payment amount.'
     }
   }
 
@@ -305,14 +307,17 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       amount
     })
     const feeItems = quoteFeeItems(result?.fees)
+    const feeAssets = [...new Set(feeItems.map((item) => item.asset).filter(Boolean))]
 
     return {
       network: selected.label,
-      gasAsset: selected.nativeSymbol,
+      feeMode: 'gateway',
+      feeAsset: feeAssets.join(' / ') || 'USDC',
+      gasAsset: feeAssets.join(' / ') || 'USDC',
       feeItems,
       feeLines: feeItems.length ? feeLinesFromItems(feeItems) : ['No additional Gateway fee'],
       detail: feeItems.length
-        ? `${selected.nativeSymbol} is required by ${selected.label} for network gas.`
+        ? 'Gateway quoted these route fees before the payment is submitted.'
         : 'Gateway did not quote an additional route fee for this payment.'
     }
 
@@ -618,7 +623,9 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-black uppercase text-arc">Network and fee</p>
               <p className="text-xs font-bold text-ink/55">
-                {feePreview.network ?? selectedSource.label} · Gas: {feePreview.gasAsset ?? (isArcSource ? 'USDC' : selectedSource.nativeSymbol)}
+                {feePreview.network ?? selectedSource.label} - {feePreview.feeMode === 'gateway'
+                  ? `Gateway fees: ${feePreview.feeAsset ?? 'USDC'}`
+                  : `Gas: ${feePreview.gasAsset ?? (isArcSource ? 'USDC' : selectedSource.nativeSymbol)}`}
               </p>
             </div>
             {feePreview.state === 'loading' ? (

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
+import { ARC_TESTNET_ID } from '@/lib/arc'
 import { sendArcUsdcFromCircleWallet } from '@/lib/circleWallets'
+import { createNativeGasEvidence } from '@/lib/payment-fee-evidence'
 import { createPaymentRecord, getPageForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getOnchainActionBlockMessage } from '@/lib/runtime-network'
@@ -62,6 +64,12 @@ export async function POST(request) {
       explorerUrl,
       circleTransactionId: result?.id ?? null,
       circleState: result?.state ?? 'INITIATED',
+      feeEvidence: [createNativeGasEvidence({
+        label: 'Direct withdrawal',
+        transaction: result,
+        chainId: ARC_TESTNET_ID,
+        asset: 'USDC'
+      })],
       status: 'submitted',
       kind: 'outgoing',
       operation: 'direct-withdrawal',

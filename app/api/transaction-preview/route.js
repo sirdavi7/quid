@@ -99,8 +99,8 @@ export async function POST(request) {
         amount
       })
       const feeItems = [
-        createFeeItem('Approval network fee', fees.approval, source.nativeSymbol),
-        createFeeItem('Gateway deposit network fee', fees.deposit, source.nativeSymbol)
+        createFeeItem('Approval gas estimate', fees.approval, source.nativeSymbol),
+        createFeeItem('Gateway deposit gas estimate', fees.deposit, source.nativeSymbol)
       ].filter(Boolean)
       const feeLines = feeLinesFromItems(feeItems)
 
@@ -110,12 +110,14 @@ export async function POST(request) {
 
       return NextResponse.json({
         network: source.label,
+        feeMode: 'native',
+        feeAsset: source.nativeSymbol,
         gasAsset: source.nativeSymbol,
         feeItems,
         feeLines,
         detail: source.id === chainOptions[0].id
-          ? 'Arc uses USDC for both network fees and the deposit amount.'
-          : `${source.nativeSymbol} is required to pay the two network transactions for this Gateway deposit.`
+          ? 'Arc uses USDC for network gas and the deposit amount. The receipt shows the final gas paid after confirmation.'
+          : `These are ${source.nativeSymbol} estimates for the approval and Gateway deposit. The receipt shows the final gas paid after confirmation.`
       })
     }
 
@@ -138,14 +140,16 @@ export async function POST(request) {
         throw new Error('Circle did not return a live network fee quote for this withdrawal.')
       }
 
-      const feeItems = [createFeeItem('Network fee', fee, 'USDC')].filter(Boolean)
+      const feeItems = [createFeeItem('Network gas estimate', fee, 'USDC')].filter(Boolean)
 
       return NextResponse.json({
         network: 'Arc Testnet',
+        feeMode: 'native',
+        feeAsset: 'USDC',
         gasAsset: 'USDC',
         feeItems,
         feeLines: feeLinesFromItems(feeItems),
-        detail: 'Arc uses USDC for network gas. The fee is separate from the withdrawal amount.'
+        detail: 'Arc uses USDC for network gas. The receipt shows the final gas paid after confirmation.'
       })
     }
 
@@ -181,10 +185,13 @@ export async function POST(request) {
         .map((fee) => createFeeItem(gatewayFeeLabel(fee.type), fee.amount, fee.token))
         .filter(Boolean)
       const feeLines = feeLinesFromItems(feeItems)
+      const feeAssets = [...new Set(feeItems.map((fee) => fee.asset).filter(Boolean))]
 
       return NextResponse.json({
         network: `${source.label} to ${destination.label}`,
-        gasAsset: source.nativeSymbol,
+        feeMode: 'gateway',
+        feeAsset: feeAssets.join(' / ') || 'USDC',
+        gasAsset: feeAssets.join(' / ') || 'USDC',
         feeItems,
         feeLines,
         detail: feeLines.length

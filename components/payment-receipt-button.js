@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ExternalLink, ReceiptText, X } from 'lucide-react'
+import { ExternalLink, Loader2, ReceiptText, X } from 'lucide-react'
 import { formatQuidTimestamp } from '@/lib/date-time'
 import { addressOrQuidPageLabel } from '@/lib/address-aliases'
 
@@ -77,36 +77,98 @@ function statusLabel(status) {
   return value
 }
 
+function nativeGasEvidence(payment) {
+  return Array.isArray(payment?.feeEvidence)
+    ? payment.feeEvidence.filter((item) => item?.kind === 'native-gas')
+    : []
+}
+
+function needsReceiptRefresh(payment) {
+  const operation = String(payment?.operation ?? '').toLowerCase()
+  const tracksNativeGas = operation === 'gateway-deposit' || operation === 'direct-withdrawal'
+  const evidence = nativeGasEvidence(payment)
+
+  return payment?.status === 'submitted' || (tracksNativeGas && (!evidence.length || evidence.some((item) => (
+    String(item.txHash ?? '').startsWith('0x') && !item.actualGasPaid
+  ))))
+}
+
+function nativeGasStatus(item) {
+  if (item.actualGasPaid) {
+    return `Actual gas paid: ${item.actualGasPaid} ${item.asset}`
+  }
+
+  if (String(item.state ?? '').toLowerCase() === 'failed') {
+    return 'This chain transaction failed. Its exact gas amount is not available yet.'
+  }
+
+  return String(item.txHash ?? '').startsWith('0x')
+    ? 'Waiting for the chain receipt to report the exact gas paid.'
+    : 'Transaction hash is not available yet.'
+}
+
 export function PaymentReceiptButton({ payment, explorerUrl, addressAliases = {} }) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [reconciledPayment, setReconciledPayment] = useState(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+  useEffect(() => {
+    setReconciledPayment(null)
+  }, [payment])
+
+  async function openReceipt() {
+    setOpen(true)
+
+    if (!payment?.id || !needsReceiptRefresh(payment)) {
+      return
+    }
+
+    setIsRefreshing(true)
+
+    try {
+      const response = await fetch(`/api/payments/${payment.id}/reconcile`, { method: 'POST' })
+      const payload = await response.json().catch(() => ({}))
+
+      if (response.ok && payload.payment) {
+        setReconciledPayment(payload.payment)
+      }
+    } catch {
+      // The receipt remains useful even when a temporary RPC read fails.
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  const receiptPayment = reconciledPayment ? { ...payment, ...reconciledPayment } : payment
+  const feeEvidence = nativeGasEvidence(receiptPayment)
+  const activeExplorerUrl = receiptPayment.explorerUrl ?? explorerUrl
   const rows = [
-    ['Type', paymentType(payment)],
-    ['Amount', formatUsdc(payment.amount)],
-    ['From', fromLabel(payment, addressAliases)],
-    ['Sender wallet', fullAddress(payment.payerAddress)],
-    ['To', toLabel(payment, addressAliases)],
-    ['Recipient wallet', fullAddress(payment.recipientAddress)],
-    ['Source chain', payment.sourceChain || 'Arc Testnet'],
-    ['Destination chain', payment.destinationChain || 'Arc Testnet'],
-    ['Transaction hash', payment.txHash ? fullAddress(payment.txHash) : 'Not available yet'],
-    ...(payment.circleTransactionId ? [['Circle transaction ID', payment.circleTransactionId]] : []),
-    ['Block number', payment.blockNumber ?? (payment.status === 'confirmed' ? 'Not supplied by Circle' : 'Not available yet')],
-    ['Status', statusLabel(payment.status)],
-    ['Submitted', formatDate(payment.createdAt)],
-    ...(payment.confirmedAt ? [['Confirmed', formatDate(payment.confirmedAt)]] : []),
-    ...(payment.failureReason ? [['Failure', payment.failureReason]] : [])
+    ['Type', paymentType(receiptPayment)],
+    ['Amount', formatUsdc(receiptPayment.amount)],
+    ['From', fromLabel(receiptPayment, addressAliases)],
+    ['Sender wallet', fullAddress(receiptPayment.payerAddress)],
+    ['To', toLabel(receiptPayment, addressAliases)],
+    ['Recipient wallet', fullAddress(receiptPayment.recipientAddress)],
+    ['Source chain', receiptPayment.sourceChain || 'Arc Testnet'],
+    ['Destination chain', receiptPayment.destinationChain || 'Arc Testnet'],
+    ['Transaction hash', receiptPayment.txHash ? fullAddress(receiptPayment.txHash) : 'Not available yet'],
+    ...(receiptPayment.circleTransactionId ? [['Circle transaction ID', receiptPayment.circleTransactionId]] : []),
+    ['Block number', receiptPayment.blockNumber ?? (receiptPayment.status === 'confirmed' ? 'Not supplied by Circle' : 'Not available yet')],
+    ['Status', statusLabel(receiptPayment.status)],
+    ['Submitted', formatDate(receiptPayment.createdAt)],
+    ...(receiptPayment.confirmedAt ? [['Confirmed', formatDate(receiptPayment.confirmedAt)]] : []),
+    ...(receiptPayment.failureReason ? [['Failure', receiptPayment.failureReason]] : [])
   ]
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openReceipt}
         className="quid-secondary-action h-8 gap-1 px-2 text-xs"
       >
         <ReceiptText size={13} /> Receipt
@@ -124,7 +186,7 @@ export function PaymentReceiptButton({ payment, explorerUrl, addressAliases = {}
               <div>
                 <p className="text-sm font-bold text-arc">Transaction receipt</p>
                 <h3 id={'payment-receipt-' + payment.id} className="mt-1 text-2xl font-black text-ink">
-                  {paymentType(payment)}
+                  {paymentType(receiptPayment)}
                 </h3>
               </div>
               <button
@@ -141,14 +203,14 @@ export function PaymentReceiptButton({ payment, explorerUrl, addressAliases = {}
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xl font-black text-ink">Quid</p>
                 <span className="rounded-full bg-mint/20 px-3 py-1 text-xs font-black uppercase text-ink">
-                  {statusLabel(payment.status)}
+                  {statusLabel(receiptPayment.status)}
                 </span>
               </div>
               <p className="mt-1 text-xs font-black uppercase tracking-[0.18em] text-ink/45">
-                {chainLabel(payment)}
+                {chainLabel(receiptPayment)}
               </p>
               <p className="mt-6 text-4xl font-black text-ink">
-                {payment.kind === 'outgoing' ? '-' : '+'}{formatUsdc(payment.amount)}
+                {receiptPayment.kind === 'outgoing' ? '-' : '+'}{formatUsdc(receiptPayment.amount)}
               </p>
 
               <dl className="mt-6 divide-y divide-ink/10 text-sm">
@@ -159,11 +221,39 @@ export function PaymentReceiptButton({ payment, explorerUrl, addressAliases = {}
                   </div>
                 ))}
               </dl>
+
+              {feeEvidence.length ? (
+                <div className="mt-5 border-t border-ink/10 pt-4">
+                  <p className="text-xs font-black uppercase text-arc">Native gas receipts</p>
+                  <div className="mt-2 divide-y divide-ink/10">
+                    {feeEvidence.map((item, index) => (
+                      <div key={`${item.label}-${item.transactionId ?? item.txHash ?? index}`} className="py-3 first:pt-0 last:pb-0">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="font-bold text-ink">{item.label}</p>
+                            <p className="mt-1 text-xs leading-5 text-ink/60">{nativeGasStatus(item)}</p>
+                          </div>
+                          {item.explorerUrl ? (
+                            <a href={item.explorerUrl} target="_blank" rel="noreferrer" className="text-xs font-black text-arc">
+                              Explorer
+                            </a>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {isRefreshing ? (
+                    <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink/55">
+                      <Loader2 size={14} className="animate-spin" /> Checking chain receipts
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
-            {explorerUrl ? (
+            {activeExplorerUrl ? (
               <a
-                href={explorerUrl}
+                href={activeExplorerUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="quid-primary-action mt-4 w-full"

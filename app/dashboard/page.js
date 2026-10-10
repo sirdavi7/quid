@@ -98,6 +98,21 @@ function paymentStatusClass(status) {
   return 'bg-haze text-ink/70 dark:bg-white/10 dark:text-white/75'
 }
 
+function needsPaymentLifecycleSync(payment) {
+  if (payment.status === 'submitted') {
+    return true
+  }
+
+  const operation = String(payment.operation ?? '').toLowerCase()
+  const tracksNativeGas = operation === 'gateway-deposit' || operation === 'direct-withdrawal'
+
+  return tracksNativeGas && Array.isArray(payment.feeEvidence) && payment.feeEvidence.some((item) => (
+    item?.kind === 'native-gas' &&
+    String(item.txHash ?? '').startsWith('0x') &&
+    !item.actualGasPaid
+  ))
+}
+
 export default async function DashboardPage() {
   let user = null
 
@@ -133,7 +148,7 @@ export default async function DashboardPage() {
   return (
     <>
       <main className="min-h-screen bg-paper">
-        <TransactionStatusSync ownerId={user.id} hasSubmittedPayments={payments.some((payment) => payment.status === 'submitted')} />
+        <TransactionStatusSync ownerId={user.id} hasSubmittedPayments={payments.some(needsPaymentLifecycleSync)} />
         <AppHeader>
           <HomeNavButton />
           <DashboardNavMenu username={primaryPage?.username} />

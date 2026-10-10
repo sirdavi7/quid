@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { chainOptions } from '@/lib/chains'
 import { GATEWAY_WALLET_EVM_TESTNET, getExplorerUrlForChain, submitCircleWalletUsdcToGateway } from '@/lib/circleWallets'
+import { createNativeGasEvidence } from '@/lib/payment-fee-evidence'
 import { createPaymentRecord, getPageForOwner, getWalletForPageChain, listWalletsForPage } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createCircleWalletsUnifiedAdapter, createServerUnifiedBalanceKit } from '@/lib/unifiedBalance'
@@ -172,6 +173,20 @@ export async function POST(request) {
         explorerUrl,
         circleTransactionId: result.id,
         circleState: result.state ?? 'INITIATED',
+        feeEvidence: [
+          createNativeGasEvidence({
+            label: 'USDC approval',
+            transaction: result.approval,
+            chainId: source.id,
+            asset: source.nativeSymbol
+          }),
+          createNativeGasEvidence({
+            label: 'Gateway deposit',
+            transaction: result,
+            chainId: source.id,
+            asset: source.nativeSymbol
+          })
+        ].filter((item) => item.transactionId || item.txHash),
         status: 'submitted',
         kind: 'outgoing',
         operation: 'gateway-deposit',

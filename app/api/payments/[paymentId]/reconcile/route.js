@@ -14,7 +14,8 @@ function toPublicPayment(payment) {
     explorerUrl: payment.explorerUrl,
     blockNumber: payment.blockNumber,
     confirmedAt: payment.confirmedAt,
-    failureReason: payment.failureReason
+    failureReason: payment.failureReason,
+    feeEvidence: payment.feeEvidence ?? []
   }
 }
 

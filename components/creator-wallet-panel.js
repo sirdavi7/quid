@@ -480,7 +480,7 @@ export function CreatorWalletPanel({ page }) {
 
         {!canWithdrawDirectly ? (
           <p className="mt-4 rounded-md border border-arc/20 bg-haze px-3 py-2 text-sm font-semibold text-ink/70">
-            {selectedSource.label} direct withdrawal uses Gateway. Deposit this source balance to Gateway first, then choose a supported destination chain for the withdrawal. This Circle wallet also needs test {selectedSource.nativeSymbol} for the Gateway deposit fee.
+            {selectedSource.label} direct withdrawal uses Gateway. Deposit this source balance to Gateway first, then choose a supported destination chain for the withdrawal. This Circle wallet needs enough test {selectedSource.nativeSymbol} for the approval and Gateway deposit; Quid records the actual gas paid once each receipt is available.
           </p>
         ) : null}
 

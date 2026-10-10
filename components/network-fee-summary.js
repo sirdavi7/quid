@@ -25,6 +25,14 @@ function FeeValue({ amount, asset }) {
   )
 }
 
+function feeContext(quote) {
+  if (quote?.feeMode === 'gateway') {
+    return `Gateway route fee quote in ${quote.feeAsset ?? 'USDC'}`
+  }
+
+  return `Estimated native gas in ${quote?.gasAsset ?? 'USDC'}`
+}
+
 export function NetworkFeeSummary({ quote, amount, amountLabel, className = '' }) {
   const feeItems = feeItemsForDisplay(quote)
 
@@ -33,10 +41,11 @@ export function NetworkFeeSummary({ quote, amount, amountLabel, className = '' }
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-black uppercase text-arc">Network and fee</p>
         <p className="text-xs font-bold text-ink/55">
-          {quote.network} · Gas: {quote.gasAsset}
+          {quote.network}
         </p>
       </div>
 
+      <p className="mt-2 text-xs font-black uppercase text-ink/55">{feeContext(quote)}</p>
       <div className="mt-3 grid gap-0">
         {feeItems.length ? feeItems.map((item, index) => {
           if (item.text) {
