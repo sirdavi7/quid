@@ -33,8 +33,36 @@ function feeContext(quote) {
   return `Estimated native gas in ${quote?.gasAsset ?? 'USDC'}`
 }
 
-export function NetworkFeeSummary({ quote, amount, amountLabel, className = '' }) {
+function totalFeesByAsset(feeItems) {
+  const totals = new Map()
+
+  feeItems.forEach((item) => {
+    if (item.text) {
+      return
+    }
+
+    const amount = Number(item.amount)
+    const asset = String(item.asset ?? '').trim()
+
+    if (!Number.isFinite(amount) || !asset) {
+      return
+    }
+
+    totals.set(asset, (totals.get(asset) ?? 0) + amount)
+  })
+
+  return [...totals.entries()].map(([asset, amount]) => ({
+    asset,
+    amount: amount.toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 6
+    })
+  }))
+}
+
+export function NetworkFeeSummary({ quote, amount, amountLabel, feeTotalLabel = '', className = '' }) {
   const feeItems = feeItemsForDisplay(quote)
+  const feeTotals = feeTotalLabel ? totalFeesByAsset(feeItems) : []
 
   return (
     <div className={`rounded-md border border-arc/20 bg-haze p-4 ${className}`.trim()}>
@@ -67,6 +95,17 @@ export function NetworkFeeSummary({ quote, amount, amountLabel, className = '' }
         )}
       </div>
 
+      {feeTotals.length ? (
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-ink/10 pt-3">
+          <span className="text-sm font-black text-ink">{feeTotalLabel}</span>
+          <span className="grid justify-items-end gap-1">
+            {feeTotals.map((item) => (
+              <FeeValue key={item.asset} amount={item.amount} asset={item.asset} />
+            ))}
+          </span>
+        </div>
+      ) : null}
+      
       {amount ? (
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-ink/10 pt-3">
           <span className="text-sm font-semibold text-ink/65">{amountLabel}</span>

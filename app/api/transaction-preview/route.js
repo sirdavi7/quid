@@ -93,6 +93,18 @@ export async function POST(request) {
         return NextResponse.json({ error: `Set up the ${source.label} receive wallet before previewing its Gateway deposit.` }, { status: 400 })
       }
 
+      if (source.id === chainOptions[0].id) {
+        return NextResponse.json({
+          network: source.label,
+          feeMode: 'native',
+          feeAsset: 'USDC',
+          gasAsset: 'USDC',
+          feeItems: [],
+          feeLines: ['Live Arc gas estimate unavailable'],
+          detail: 'Circle cannot return an Arc Gateway contract-fee quote before submission. Quid will show the exact USDC gas from the approval and deposit receipts after confirmation.'
+        })
+      }
+      
       const fees = await estimateCircleWalletGatewayDepositFees({
         walletId: wallet.walletId,
         usdcAddress: source.usdcAddress,

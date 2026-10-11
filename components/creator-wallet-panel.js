@@ -499,6 +499,7 @@ export function CreatorWalletPanel({ page }) {
                   ? 'Gateway withdrawal amount'
                   : 'Withdrawal amount'
             }
+            feeTotalLabel={feePreview.action === 'send' ? 'Total Gateway fee' : ''}
           />
         ) : null}
 
