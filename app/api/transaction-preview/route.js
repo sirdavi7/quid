@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
+import { ARC_TESTNET_ID } from '@/lib/arc'
 import { chainOptions } from '@/lib/chains'
-import {
-  estimateCircleWalletGatewayDepositFees,
-  estimateCircleWalletUsdcTransferFee
-} from '@/lib/circleWallets'
+import { estimateCircleWalletUsdcTransferFee } from '@/lib/circleWallets'
 import { getPageForOwner, getWalletForPageChain } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createCircleWalletsUnifiedAdapter, createServerUnifiedBalanceKit } from '@/lib/unifiedBalance'
@@ -89,48 +87,62 @@ export async function POST(request) {
 
       const wallet = await getWalletForPageChain(page.id, source.id)
 
-      if (!wallet?.walletId) {
+      if (!wallet?.walletId || !wallet.walletAddress) {
         return NextResponse.json({ error: `Set up the ${source.label} receive wallet before previewing its Gateway deposit.` }, { status: 400 })
       }
 
-      if (source.id === chainOptions[0].id) {
+      try {
+        const kit = createServerUnifiedBalanceKit()
+        const adapter = createCircleWalletsUnifiedAdapter()
+        const estimate = await kit.estimateDeposit({
+          from: {
+            adapter,
+            address: wallet.walletAddress,
+            chain: source.gatewayName
+          },
+          amount,
+          token: 'USDC',
+          allowanceStrategy: 'approve'
+        })
+        const feeItems = (estimate?.fees ?? [])
+          .filter((fee) => fee?.amount !== undefined && fee?.token)
+          .map((fee) => createFeeItem(
+            fee.type === 'gasFee' ? 'Approval and Gateway deposit gas' : gatewayFeeLabel(fee.type),
+            fee.amount,
+            fee.token
+          ))
+          .filter(Boolean)
+        const feeLines = feeLinesFromItems(feeItems)
+
+        if (!feeLines.length) {
+          throw new Error('Gateway did not return a live fee quote for this deposit.')
+        }
+
+        const feeAssets = [...new Set(feeItems.map((fee) => fee.asset).filter(Boolean))]
+
         return NextResponse.json({
           network: source.label,
-          feeMode: 'native',
-          feeAsset: 'USDC',
-          gasAsset: 'USDC',
+          feeMode: 'gateway-deposit',
+          feeAsset: feeAssets.join(' / ') || source.nativeSymbol,
+          gasAsset: feeAssets.join(' / ') || source.nativeSymbol,
+          feeItems,
+          feeLines,
+          detail: 'Gateway quoted the approval and Gateway deposit network gas before submission. The receipt shows the exact gas paid after confirmation.'
+        })
+      } catch (error) {
+        logServerError(`Gateway deposit quote ${source.label}`, error)
+
+        return NextResponse.json({
+          network: source.label,
+          feeMode: 'gateway-deposit',
+          feeAsset: source.nativeSymbol,
+          gasAsset: source.nativeSymbol,
+          feeQuoteUnavailable: true,
           feeItems: [],
-          feeLines: ['Live Arc gas estimate unavailable'],
-          detail: 'Circle cannot return an Arc Gateway contract-fee quote before submission. Quid will show the exact USDC gas from the approval and deposit receipts after confirmation.'
+          feeLines: ['Live Gateway deposit fee quote unavailable'],
+          detail: 'Quid could not retrieve the live Gateway deposit fee right now. You can still continue; the approval and deposit receipts will show the exact gas paid after confirmation.'
         })
       }
-      
-      const fees = await estimateCircleWalletGatewayDepositFees({
-        walletId: wallet.walletId,
-        usdcAddress: source.usdcAddress,
-        amount
-      })
-      const feeItems = [
-        createFeeItem('Approval gas estimate', fees.approval, source.nativeSymbol),
-        createFeeItem('Gateway deposit gas estimate', fees.deposit, source.nativeSymbol)
-      ].filter(Boolean)
-      const feeLines = feeLinesFromItems(feeItems)
-
-      if (!feeLines.length) {
-        throw new Error('Circle did not return a live network fee quote for this Gateway deposit.')
-      }
-
-      return NextResponse.json({
-        network: source.label,
-        feeMode: 'native',
-        feeAsset: source.nativeSymbol,
-        gasAsset: source.nativeSymbol,
-        feeItems,
-        feeLines,
-        detail: source.id === chainOptions[0].id
-          ? 'Arc uses USDC for network gas and the deposit amount. The receipt shows the final gas paid after confirmation.'
-          : `These are ${source.nativeSymbol} estimates for the approval and Gateway deposit. The receipt shows the final gas paid after confirmation.`
-      })
     }
 
     if (action === 'withdraw') {
@@ -171,7 +183,7 @@ export async function POST(request) {
       }
 
       const wallet = await getWalletForPageChain(page.id, source.id)
-      const sourceAddress = wallet?.walletAddress ?? (source.id === chainOptions[0].id ? page.walletAddress : '')
+      const sourceAddress = wallet?.walletAddress ?? (source.id === ARC_TESTNET_ID ? page.walletAddress : '')
 
       if (!sourceAddress) {
         return NextResponse.json({ error: `Set up the ${source.label} receive wallet before previewing this Gateway withdrawal.` }, { status: 400 })

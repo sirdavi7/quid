@@ -26,6 +26,12 @@ function FeeValue({ amount, asset }) {
 }
 
 function feeContext(quote) {
+  if (quote?.feeMode === 'gateway-deposit') {
+    return quote.feeQuoteUnavailable
+      ? 'Live Gateway deposit fee quote unavailable'
+      : `Gateway deposit fee quote in ${quote.feeAsset ?? 'USDC'}`
+  }
+
   if (quote?.feeMode === 'gateway') {
     return `Gateway route fee quote in ${quote.feeAsset ?? 'USDC'}`
   }
