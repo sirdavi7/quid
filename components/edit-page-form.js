@@ -1,20 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ExternalLink, Loader2, Save } from 'lucide-react'
 import { getFriendlyUserError } from '@/lib/user-errors'
 
 export function EditPageForm({ page }) {
-  const router = useRouter()
   const [form, setForm] = useState({
     name: page.name,
     headline: page.headline,
     note: page.note ?? ''
   })
-  const [savedPage, setSavedPage] = useState(page)
-  const [status, setStatus] = useState('')
+  const savedPage = page
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -24,7 +21,6 @@ export function EditPageForm({ page }) {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    setStatus('')
     setError('')
     setIsSubmitting(true)
 
@@ -41,9 +37,7 @@ export function EditPageForm({ page }) {
       }
 
       const updatedPage = payload.page ?? { ...savedPage, ...form }
-      setSavedPage(updatedPage)
-      setStatus('Payment page updated.')
-      router.refresh()
+      window.location.assign(`/pay/${encodeURIComponent(updatedPage.username)}`)
     } catch (submitError) {
       setError(getFriendlyUserError(submitError, { fallback: 'Quid could not save those page details right now. Try again in a moment.' }))
     } finally {
@@ -94,7 +88,7 @@ export function EditPageForm({ page }) {
               {savedPage.note ? <p className="mt-2 text-xs leading-5 text-ink/55">{savedPage.note}</p> : null}
               <p className="mt-3 font-mono text-sm text-ink">/pay/{savedPage.username}</p>
             </div>
-            <Link href={`/pay/${savedPage.username}`} className="quid-secondary-action h-9 px-3 text-xs">
+            <Link href={`/pay/${savedPage.username}`} prefetch={false} className="quid-secondary-action h-9 px-3 text-xs">
               Open <ExternalLink size={13} />
             </Link>
           </div>
@@ -102,7 +96,6 @@ export function EditPageForm({ page }) {
         </div>
       </div>
 
-      {status ? <p className="mt-4 rounded-md bg-mint/20 px-3 py-2 text-sm font-semibold text-ink">{status}</p> : null}
       {error ? <p className="mt-4 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">{error}</p> : null}
 
       <button
@@ -111,7 +104,7 @@ export function EditPageForm({ page }) {
         className="quid-primary-action mt-5 h-12 w-full px-4 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-        Save payment page
+        Save and view public page
       </button>
     </form>
   )

@@ -3,7 +3,7 @@ import { AppHeader } from '@/components/app-header'
 import { AppFooterStrip } from '@/components/app-footer-strip'
 import { DashboardNavMenu } from '@/components/dashboard-nav-menu'
 import { EditPageForm } from '@/components/edit-page-form'
-import { FaucetNavButton, HomeNavButton } from '@/components/nav-buttons'
+import { FaucetNavButton, HomeNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { getPageForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -38,6 +38,7 @@ export default async function SettingsPage() {
         <AppHeader>
           <HomeNavButton />
           <DashboardNavMenu username={page.username} />
+          <SignOutNavButton />
           <FaucetNavButton />
         </AppHeader>
 

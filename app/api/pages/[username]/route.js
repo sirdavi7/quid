@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from 'next/server'
 import { getPage, updatePageForOwner } from '@/lib/store'
+import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
 
@@ -39,6 +40,8 @@ export async function PATCH(request, { params }) {
       headline: body.headline,
       note: body.note
     })
+
+    revalidatePath(`/pay/${page.username}`)
 
     return NextResponse.json({ page })
   } catch (error) {
