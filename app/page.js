@@ -60,7 +60,7 @@ export default async function Home() {
       eyebrow: 'Open',
       title: 'Scan & Pay',
       body: 'Open a Quid payment from a camera scan, uploaded QR image, or a shared payment link.',
-      href: primaryPage ? `${paymentPageHref}#scan-pay` : '/create',
+      href: primaryPage ? `${paymentPageHref}/#scan-pay` : '/create',
       action: primaryPage ? 'Open scan and pay' : 'Create a page first'
     },
     {
@@ -68,7 +68,7 @@ export default async function Home() {
       eyebrow: 'Manage',
       title: 'Quid Wallet',
       body: 'See supported receive wallets, check balances, route funds with Gateway, and withdraw with proof.',
-      href: primaryPage ? `${paymentPageHref}#withdraw` : dashboardHref,
+      href: primaryPage ? `${paymentPageHref}/#withdraw` : dashboardHref,
       action: primaryPage ? 'Open wallet controls' : user ? 'Open dashboard' : 'Create a page first'
     }
   ]
