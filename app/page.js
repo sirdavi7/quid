@@ -61,6 +61,7 @@ export default async function Home() {
       title: 'Scan & Pay',
       body: 'Open a Quid payment from a camera scan, uploaded QR image, or a shared payment link.',
       href: primaryPage ? `${paymentPageHref}/#scan-pay` : '/create',
+      fullPageNavigation: Boolean(primaryPage),
       action: primaryPage ? 'Open scan and pay' : 'Create a page first'
     },
     {
@@ -69,6 +70,7 @@ export default async function Home() {
       title: 'Quid Wallet',
       body: 'See supported receive wallets, check balances, route funds with Gateway, and withdraw with proof.',
       href: primaryPage ? `${paymentPageHref}/#withdraw` : dashboardHref,
+      fullPageNavigation: Boolean(primaryPage),
       action: primaryPage ? 'Open wallet controls' : user ? 'Open dashboard' : 'Create a page first'
     }
   ]
@@ -196,9 +198,11 @@ export default async function Home() {
         <div className="mt-9 grid gap-4 md:grid-cols-2">
           {products.map((product) => {
             const Icon = product.icon
+            const ProductLink = product.fullPageNavigation ? 'a' : Link
+
             return (
               <ScrollReveal key={product.title}>
-                <Link
+                <ProductLink
                   href={product.href}
                   className="group relative flex h-full min-h-[268px] flex-col overflow-hidden rounded-lg border border-arc/20 bg-white p-6 text-ink shadow-panel transition duration-300 hover:-translate-y-0.5 hover:border-violet/45 dark:border-white/15 dark:bg-gradient-to-br dark:from-[#08072f]/94 dark:via-[#17143e]/90 dark:to-[#33205d]/84 dark:text-white dark:shadow-glow"
                 >
@@ -220,7 +224,7 @@ export default async function Home() {
                   <span className="relative mt-auto inline-flex items-center gap-2 pt-6 text-sm font-black text-arc dark:text-arc">
                     {product.action} <ArrowUpRight size={17} className="transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </span>
-                </Link>
+                </ProductLink>
               </ScrollReveal>
             )
           })}
