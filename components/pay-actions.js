@@ -131,6 +131,16 @@ function gatewayUsdcRequired(amount, fees) {
   return Number(amount) + routeFee
 }
 
+function gatewayBalanceAmounts(balances) {
+  const confirmed = Number(balances?.totalConfirmedBalance ?? 0)
+  const pending = Number(balances?.totalPendingBalance ?? 0)
+
+  return {
+    confirmed: Number.isFinite(confirmed) ? confirmed : 0,
+    pending: Number.isFinite(pending) ? pending : 0
+  }
+}
+
 export function PayActions({ page, isOwner = false, initialAmount, initialChain }) {
   const { address, connector, isConnected } = useAccount()
   const chainId = useChainId()
@@ -155,6 +165,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
   const [feePreview, setFeePreview] = useState({ state: 'idle' })
   const [error, setError] = useState('')
   const [pendingAction, setPendingAction] = useState('')
+  const [checkoutProgress, setCheckoutProgress] = useState('')
   const isBusy = Boolean(pendingAction)
   const selectedSource = useMemo(
     () => chainOptions.find((option) => option.id === Number(payForm.sourceChainId)) ?? chainOptions[0],
@@ -332,10 +343,11 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     const routeFeeItems = quoteFeeItems(spendEstimate?.fees)
     const requiredGatewayUsdc = gatewayUsdcRequired(amount, routeFeeItems)
     const balances = await kit.getBalances({
-      sources: { adapter, chains: selected.gatewayName }
+      sources: { adapter, chains: selected.gatewayName },
+      includePending: true
     })
-    const availableGatewayUsdc = Number(balances.totalConfirmedBalance ?? 0)
-    const gatewayDepositAmount = Math.max(requiredGatewayUsdc - availableGatewayUsdc, 0)
+    const { confirmed: confirmedGatewayUsdc, pending: pendingGatewayUsdc } = gatewayBalanceAmounts(balances)
+    const gatewayDepositAmount = Math.max(requiredGatewayUsdc - confirmedGatewayUsdc - pendingGatewayUsdc, 0)
     let depositEstimate = null
     let depositFeeItems = []
 
@@ -360,10 +372,16 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       feeItems,
       feeLines: feeItems.length ? feeLinesFromItems(feeItems) : ['No additional Gateway fee'],
       gatewayDepositAmount: gatewayDepositAmount > 0 ? formatUsdcAmount(gatewayDepositAmount) : '',
+      confirmedGatewayUsdc: formatUsdcAmount(confirmedGatewayUsdc),
+      pendingGatewayUsdc: formatUsdcAmount(pendingGatewayUsdc),
+      requiredGatewayUsdc,
+      gatewayBalancePending: pendingGatewayUsdc > 0 && confirmedGatewayUsdc < requiredGatewayUsdc,
       depositEstimate,
       detail: gatewayDepositAmount > 0
         ? `This checkout first deposits ${formatUsdcAmount(gatewayDepositAmount)} USDC from ${selected.label} into your own Gateway balance, then sends ${amount} USDC to the recipient.`
-        : 'This checkout uses your existing Gateway balance, then sends the payment to the recipient.'
+        : pendingGatewayUsdc > 0 && confirmedGatewayUsdc < requiredGatewayUsdc
+          ? 'A previous Gateway deposit is still confirming. Quid will wait for it before sending this payment.'
+          : 'This checkout uses your existing Gateway balance, then sends the payment to the recipient.'
     }
 
   }
@@ -374,6 +392,28 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     }
 
     return getGatewayCheckoutQuote(selected, adapter, amount)
+  }
+
+  async function waitForGatewayBalance(adapter, selected, requiredGatewayUsdc) {
+    const maximumAttempts = 30
+
+    for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
+      const balances = await kit.getBalances({
+        sources: { adapter, chains: selected.gatewayName },
+        includePending: true
+      })
+      const { confirmed } = gatewayBalanceAmounts(balances)
+
+      if (confirmed >= requiredGatewayUsdc) {
+        return
+      }
+
+      if (attempt < maximumAttempts - 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 2000))
+      }
+    }
+
+    throw new Error('Gateway is still confirming the deposit. Keep this page open and try the payment again shortly.')
   }
 
   function paymentConfirmationMessage(quote, amount, recipientLabel) {
@@ -476,6 +516,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     setTransaction(null)
     setError('')
     setPendingAction('pay')
+    setCheckoutProgress('')
     let gatewayDepositSubmitted = false
 
     try {
@@ -531,12 +572,20 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
         }
 
         if (quote.gatewayDepositAmount) {
+          setCheckoutProgress(`Confirm the ${quote.gatewayDepositAmount} USDC Gateway deposit in your wallet.`)
           await kit.deposit({
             ...quote.depositEstimate,
             from: { adapter, chain: selected.gatewayName }
           })
           gatewayDepositSubmitted = true
         }
+
+        if (quote.gatewayDepositAmount || quote.gatewayBalancePending) {
+          setCheckoutProgress('Waiting for Gateway to confirm the available USDC...')
+          await waitForGatewayBalance(adapter, selected, quote.requiredGatewayUsdc)
+        }
+
+        setCheckoutProgress('Confirm the Gateway payment in your wallet.')
 
         result = await kit.spend({
           from: {
@@ -556,10 +605,11 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       setTransaction(payment)
     } catch (payError) {
       setError(gatewayDepositSubmitted
-        ? 'Your Gateway deposit was confirmed, but Quid could not finish the payment. The USDC remains in your Gateway balance. Retry this checkout to complete the payment without another deposit.'
+        ? 'Your Gateway deposit was submitted, but Quid could not finish the payment. The USDC remains in your Gateway balance while it confirms. Keep this page open, then retry the checkout. Quid checks that balance before depositing again.'
         : getFriendlyError(payError.message))
     } finally {
       setPendingAction('')
+      setCheckoutProgress('')
     }
   }
 
@@ -635,6 +685,12 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
                     {sourceNativeBalance.symbol || selectedSource.nativeSymbol}
                   </>
                 )}
+              </p>
+            ) : null}
+            {!isArcSource && feePreview.state === 'ready' ? (
+              <p className="mt-1 text-xs font-semibold text-ink/45">
+                Your Gateway balance: {feePreview.confirmedGatewayUsdc} USDC
+                {Number(feePreview.pendingGatewayUsdc) > 0 ? ` (${feePreview.pendingGatewayUsdc} USDC confirming)` : ''}
               </p>
             ) : null}
           </div>
@@ -714,6 +770,11 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
           {pendingAction === 'pay' ? <Loader2 size={17} className="animate-spin" /> : null}
           {isOwner ? 'Run test payment' : `Pay ${page.name}`}
         </button>
+        {checkoutProgress ? (
+          <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink/60">
+            <Loader2 size={16} className="animate-spin" /> {checkoutProgress}
+          </p>
+        ) : null}
         {hasLowSourceUsdcBalance ? (
           <p className="mt-3 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
             This wallet has less USDC on {selectedSource.label} than the entered amount. Add {selectedSource.label} test USDC or choose a funded source chain.
