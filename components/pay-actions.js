@@ -105,8 +105,30 @@ function quoteFeeItems(fees = []) {
     }))
 }
 
+function prefixedQuoteFeeItems(fees, prefix) {
+  return quoteFeeItems(fees).map((item) => ({
+    ...item,
+    label: `${prefix} ${item.label.charAt(0).toLowerCase()}${item.label.slice(1)}`
+  }))
+}
+
 function feeLinesFromItems(items) {
   return items.map((item) => `${item.label}: ${item.amount} ${item.asset}`)
+}
+
+function formatUsdcAmount(value) {
+  return Number(value).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 6
+  })
+}
+
+function gatewayUsdcRequired(amount, fees) {
+  const routeFee = fees
+    .filter((fee) => String(fee.asset).toUpperCase() === 'USDC')
+    .reduce((total, fee) => total + Number(fee.amount), 0)
+
+  return Number(amount) + routeFee
 }
 
 export function PayActions({ page, isOwner = false, initialAmount, initialChain }) {
@@ -293,8 +315,9 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     }
   }
 
-  async function getGatewaySpendQuote(selected, adapter, amount) {
-    const result = await kit.estimateSpend({
+  async function getGatewayCheckoutQuote(selected, adapter, amount) {
+    const from = { adapter, chain: selected.gatewayName }
+    const spendEstimate = await kit.estimateSpend({
       from: {
         adapter,
         allocations: { amount, chain: selected.gatewayName }
@@ -306,7 +329,27 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       },
       amount
     })
-    const feeItems = quoteFeeItems(result?.fees)
+    const routeFeeItems = quoteFeeItems(spendEstimate?.fees)
+    const requiredGatewayUsdc = gatewayUsdcRequired(amount, routeFeeItems)
+    const balances = await kit.getBalances({
+      sources: { adapter, chains: selected.gatewayName }
+    })
+    const availableGatewayUsdc = Number(balances.totalConfirmedBalance ?? 0)
+    const gatewayDepositAmount = Math.max(requiredGatewayUsdc - availableGatewayUsdc, 0)
+    let depositEstimate = null
+    let depositFeeItems = []
+
+    if (gatewayDepositAmount > 0) {
+      depositEstimate = await kit.estimateDeposit({
+        from,
+        amount: formatUsdcAmount(gatewayDepositAmount),
+        token: 'USDC',
+        allowanceStrategy: 'approve'
+      })
+      depositFeeItems = prefixedQuoteFeeItems(depositEstimate?.fees, 'Gateway deposit')
+    }
+
+    const feeItems = [...depositFeeItems, ...prefixedQuoteFeeItems(spendEstimate?.fees, 'Gateway route')]
     const feeAssets = [...new Set(feeItems.map((item) => item.asset).filter(Boolean))]
 
     return {
@@ -316,9 +359,11 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       gasAsset: feeAssets.join(' / ') || 'USDC',
       feeItems,
       feeLines: feeItems.length ? feeLinesFromItems(feeItems) : ['No additional Gateway fee'],
-      detail: feeItems.length
-        ? 'Gateway quoted these route fees before the payment is submitted.'
-        : 'Gateway did not quote an additional route fee for this payment.'
+      gatewayDepositAmount: gatewayDepositAmount > 0 ? formatUsdcAmount(gatewayDepositAmount) : '',
+      depositEstimate,
+      detail: gatewayDepositAmount > 0
+        ? `This checkout first deposits ${formatUsdcAmount(gatewayDepositAmount)} USDC from ${selected.label} into your own Gateway balance, then sends ${amount} USDC to the recipient.`
+        : 'This checkout uses your existing Gateway balance, then sends the payment to the recipient.'
     }
 
   }
@@ -328,14 +373,23 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       return getArcFeeQuote(page.walletAddress, amount)
     }
 
-    return getGatewaySpendQuote(selected, adapter, amount)
+    return getGatewayCheckoutQuote(selected, adapter, amount)
   }
 
   function paymentConfirmationMessage(quote, amount, recipientLabel) {
+    const gatewaySteps = quote.gatewayDepositAmount
+      ? [
+          `Gateway deposit: ${quote.gatewayDepositAmount} USDC from your ${quote.network} wallet`,
+          `Gateway payment: ${amount} USDC to ${recipientLabel}`,
+          'Your wallet may request separate confirmations for the Gateway deposit and payment.'
+        ]
+      : [`Gateway payment: ${amount} USDC to ${recipientLabel}`]
+
     return [
-      `Send ${amount} USDC to ${recipientLabel}?`,
+      quote.gatewayDepositAmount ? 'Complete this Gateway checkout?' : `Send ${amount} USDC to ${recipientLabel}?`,
       `Network: ${quote.network}`,
       `Estimated fee: ${quote.feeLines.join(' + ')}`,
+      ...gatewaySteps,
       quote.detail
     ].join('\n\n')
   }
@@ -422,6 +476,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     setTransaction(null)
     setError('')
     setPendingAction('pay')
+    let gatewayDepositSubmitted = false
 
     try {
       if (!isConnected) {
@@ -475,6 +530,14 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
           return
         }
 
+        if (quote.gatewayDepositAmount) {
+          await kit.deposit({
+            ...quote.depositEstimate,
+            from: { adapter, chain: selected.gatewayName }
+          })
+          gatewayDepositSubmitted = true
+        }
+
         result = await kit.spend({
           from: {
             adapter,
@@ -492,7 +555,9 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       const payment = await recordSubmittedPayment({ selected, result })
       setTransaction(payment)
     } catch (payError) {
-      setError(getFriendlyError(payError.message))
+      setError(gatewayDepositSubmitted
+        ? 'Your Gateway deposit was confirmed, but Quid could not finish the payment. The USDC remains in your Gateway balance. Retry this checkout to complete the payment without another deposit.'
+        : getFriendlyError(payError.message))
     } finally {
       setPendingAction('')
     }
