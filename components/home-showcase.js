@@ -49,7 +49,7 @@ const variants = {
 
 function PreviewField({ children, mark = false }) {
   return (
-    <div className="flex h-10 min-w-0 items-center gap-2 rounded-md border border-arc/15 bg-paper px-3 text-xs font-bold text-ink/55">
+    <div className="flex h-10 min-w-0 items-center gap-2 rounded-xl border border-arc/15 bg-paper px-3 text-xs font-bold text-ink/55">
       {mark ? <UsdcMark /> : null}
       <span className="truncate">{children}</span>
     </div>
@@ -63,7 +63,7 @@ function Preview({ slide }) {
         <PreviewField>Recipient 0x...</PreviewField>
         <PreviewField mark>1.00 USDC</PreviewField>
         <div className="sm:col-span-2">
-          <div className="flex h-10 items-center justify-center gap-2 rounded-md bg-arc px-3 text-xs font-black text-white"><Send size={14} /> Send USDC</div>
+          <div className="flex h-10 items-center justify-center gap-2 rounded-xl bg-arc px-3 text-xs font-black text-white"><Send size={14} /> Send USDC</div>
         </div>
       </div>
     )
@@ -74,9 +74,9 @@ function Preview({ slide }) {
       <div className="mt-6 grid gap-3">
         <PreviewField>/pay/username?amount=5</PreviewField>
         <div className="flex gap-2">
-          <div className="flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-arc px-3 text-xs font-black text-white"><Link2 size={14} /> Open</div>
-          <div className="grid h-10 w-10 place-items-center rounded-md border border-arc/20 bg-haze text-arc"><Camera size={15} /></div>
-          <div className="grid h-10 w-10 place-items-center rounded-md border border-arc/20 bg-haze text-arc"><QrCode size={15} /></div>
+          <div className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-arc px-3 text-xs font-black text-white"><Link2 size={14} /> Open</div>
+          <div className="grid h-10 w-10 place-items-center rounded-xl border border-arc/20 bg-haze text-arc"><Camera size={15} /></div>
+          <div className="grid h-10 w-10 place-items-center rounded-xl border border-arc/20 bg-haze text-arc"><QrCode size={15} /></div>
         </div>
       </div>
     )
@@ -88,7 +88,7 @@ function Preview({ slide }) {
         <PreviewField mark>5.00 USDC</PreviewField>
         <PreviewField>Arc Testnet</PreviewField>
         <div className="sm:col-span-2">
-          <div className="flex h-10 items-center justify-center gap-2 rounded-md bg-arc px-3 text-xs font-black text-white"><CircleDollarSign size={14} /> Open checkout</div>
+          <div className="flex h-10 items-center justify-center gap-2 rounded-xl bg-arc px-3 text-xs font-black text-white"><CircleDollarSign size={14} /> Open checkout</div>
         </div>
       </div>
     )
@@ -96,14 +96,14 @@ function Preview({ slide }) {
 
   return (
     <div className="mt-6 grid gap-3">
-      <div className="flex items-center justify-between rounded-md border border-arc/15 bg-haze px-3 py-3">
+      <div className="flex items-center justify-between rounded-xl border border-arc/15 bg-haze px-3 py-3">
         <div className="flex items-center gap-2 text-xs font-black text-ink"><UsdcMark /> Received USDC</div>
         <span className="text-xs font-bold text-arc">Any supported chain</span>
       </div>
       <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-black text-ink/55">
-        <span className="rounded-md border border-arc/15 bg-paper px-2 py-2">Arc</span>
-        <span className="rounded-md border border-arc/15 bg-paper px-2 py-2">Gateway</span>
-        <span className="rounded-md border border-arc/15 bg-paper px-2 py-2">Withdraw</span>
+        <span className="rounded-lg border border-arc/15 bg-paper px-2 py-2">Arc</span>
+        <span className="rounded-lg border border-arc/15 bg-paper px-2 py-2">Gateway</span>
+        <span className="rounded-lg border border-arc/15 bg-paper px-2 py-2">Withdraw</span>
       </div>
     </div>
   )
@@ -148,10 +148,10 @@ export function HomeShowcase() {
             <QuidLogo full size="showcase" />
           </div>
           <div aria-hidden="true" className="flex items-center gap-1.5 text-arc">
-            <span className="grid h-7 w-7 place-items-center rounded-md border border-arc/20 bg-paper">
+            <span className="grid h-7 w-7 place-items-center rounded-lg border border-arc/20 bg-paper">
               <Moon size={14} />
             </span>
-            <span className="inline-flex h-7 items-center gap-1.5 rounded-md border border-arc/20 bg-paper px-2 text-[10px] font-black">
+            <span className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-arc/20 bg-paper px-2 text-[10px] font-black">
               <Menu size={13} /> Menu
             </span>
           </div>
@@ -179,7 +179,7 @@ export function HomeShowcase() {
                   <h2 className="mt-2 text-2xl font-black leading-tight text-ink sm:text-3xl">{activeSlide.title}</h2>
                   <p className="mt-2 max-w-md text-sm leading-6 text-ink/60">{activeSlide.subtitle}</p>
                 </div>
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-arc/20 bg-haze text-arc">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-arc/20 bg-haze text-arc">
                   <Icon size={19} />
                 </div>
               </div>

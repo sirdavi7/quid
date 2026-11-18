@@ -61,7 +61,7 @@ export function ResetPasswordForm({ initialHasSession = false }) {
   return (
     <form onSubmit={handleSubmit} className="quid-card p-5">
       {!hasSession ? (
-        <p className="mb-4 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
+        <p className="mb-4 rounded-xl bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
           Open this page from the password reset email so Quid can verify the request.
         </p>
       ) : null}
@@ -74,7 +74,7 @@ export function ResetPasswordForm({ initialHasSession = false }) {
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="h-12 w-full rounded-md border border-ink/15 px-3 pr-12 outline-none focus:border-arc"
+              className="h-12 w-full rounded-xl border border-ink/15 px-3 pr-12 outline-none focus:border-arc"
               placeholder="At least 8 characters"
               autoComplete="new-password"
               minLength={8}
@@ -83,7 +83,7 @@ export function ResetPasswordForm({ initialHasSession = false }) {
             <button
               type="button"
               onClick={() => setShowPassword((current) => !current)}
-              className="no-motion-button absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md border border-transparent text-arc"
+              className="no-motion-button absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg border border-transparent text-arc"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               title={showPassword ? 'Hide password' : 'Show password'}
             >
@@ -98,7 +98,7 @@ export function ResetPasswordForm({ initialHasSession = false }) {
             type={showPassword ? 'text' : 'password'}
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
-            className="h-12 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+            className="h-12 rounded-xl border border-ink/15 px-3 outline-none focus:border-arc"
             placeholder="Repeat new password"
             autoComplete="new-password"
             minLength={8}
@@ -107,8 +107,8 @@ export function ResetPasswordForm({ initialHasSession = false }) {
         </label>
       </div>
 
-      {status ? <p className="mt-4 rounded-md bg-mint/20 px-3 py-2 text-sm font-semibold text-ink">{status}</p> : null}
-      {error ? <p className="mt-4 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">{error}</p> : null}
+      {status ? <p className="mt-4 rounded-xl bg-mint/20 px-3 py-2 text-sm font-semibold text-ink">{status}</p> : null}
+      {error ? <p className="mt-4 rounded-xl bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">{error}</p> : null}
 
       <button
         type="submit"

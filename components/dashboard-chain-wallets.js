@@ -196,7 +196,7 @@ export function DashboardChainWallets({ initialWallets = [], page = null, wallet
             const balance = balances[chain.id]
 
             return (
-              <article key={chain.id} className="rounded-md border border-arc/15 bg-haze p-4">
+              <article key={chain.id} className="rounded-xl border border-arc/15 bg-haze p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-black text-ink">{chain.label}</p>
@@ -235,7 +235,7 @@ export function DashboardChainWallets({ initialWallets = [], page = null, wallet
       </div>
 
       {walletMocked ? <p className="mt-4 text-sm font-semibold text-coral">Live chain wallets need Circle env vars.</p> : null}
-      {error ? <p className="mt-4 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">{error}</p> : null}
+      {error ? <p className="mt-4 rounded-xl bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">{error}</p> : null}
     </section>
   )
 }

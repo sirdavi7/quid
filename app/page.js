@@ -16,9 +16,7 @@ import {
 
 import { AppFooter } from '@/components/app-footer'
 import { AppHeader } from '@/components/app-header'
-import { DashboardNavMenu } from '@/components/dashboard-nav-menu'
 import { HomeShowcase } from '@/components/home-showcase'
-import { CreateNavButton, FaucetNavButton, HomeNavButton, LoginNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { ScrollReveal } from '@/components/scroll-reveal'
 import { getPageForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -109,26 +107,12 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-paper text-ink">
-      <AppHeader includeSite>
-        <HomeNavButton />
-        {user ? (
-          <>
-            <DashboardNavMenu username={primaryPage?.username} />
-            <SignOutNavButton />
-          </>
-        ) : (
-          <>
-            <LoginNavButton />
-            <CreateNavButton />
-          </>
-        )}
-        <FaucetNavButton />
-      </AppHeader>
+      <AppHeader account={user ? { email: user.email, username: primaryPage?.username } : null} />
 
       <section className="border-b border-arc/10 bg-haze/25">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-14 pt-28 sm:pb-16 sm:pt-32 lg:grid-cols-[0.84fr_1.16fr] lg:gap-12 lg:pt-36">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-14 pt-10 sm:pb-16 sm:pt-14 lg:grid-cols-[0.84fr_1.16fr] lg:gap-12 lg:pt-16">
           <div>
-            <p className="inline-flex max-w-full rounded-md border border-arc/20 bg-paper px-3 py-2 text-sm font-bold leading-5 text-arc">
+            <p className="inline-flex max-w-full rounded-xl border border-arc/20 bg-paper px-3 py-2 text-sm font-bold leading-5 text-arc">
               Built for clear USDC movement, Use Quid
             </p>
             <h1 className="mt-5 max-w-xl text-4xl font-black leading-[1.04] text-ink sm:text-5xl lg:text-6xl">
@@ -141,13 +125,13 @@ export default async function Home() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href={dashboardHref}
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-arc px-5 text-sm font-black text-white transition hover:bg-violet sm:w-auto"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-arc px-5 text-sm font-black text-white transition hover:bg-violet sm:w-auto"
               >
                 {user ? 'Open dashboard' : 'Create your Quid page'} <ArrowRight size={18} />
               </Link>
               <a
                 href="#product"
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-arc/20 bg-paper px-5 text-sm font-black text-arc transition hover:border-arc/45 hover:text-arc dark:text-ink sm:w-auto"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-arc/20 bg-paper px-5 text-sm font-black text-arc transition hover:border-arc/45 hover:text-arc dark:text-ink sm:w-auto"
               >
                 Explore products <ArrowRight size={18} />
               </a>
@@ -214,7 +198,7 @@ export default async function Home() {
                     className="pointer-events-none absolute -right-10 -top-12 w-44 opacity-[0.12] dark:opacity-[0.09]"
                   />
                   <div className="relative">
-                    <div className="grid h-11 w-11 place-items-center rounded-md border border-arc/15 bg-haze text-arc dark:border-arc/40 dark:bg-arc/15 dark:text-arc">
+                    <div className="grid h-11 w-11 place-items-center rounded-xl border border-arc/15 bg-haze text-arc dark:border-arc/40 dark:bg-arc/15 dark:text-arc">
                       <Icon size={20} />
                     </div>
                     <p className="mt-6 text-xs font-black uppercase text-arc dark:text-arc">{product.eyebrow}</p>
@@ -250,7 +234,7 @@ export default async function Home() {
               return (
                 <ScrollReveal key={point.title}>
                   <article className="flex gap-4 border-b border-arc/15 py-5 last:border-b-0">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-paper text-arc">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-paper text-arc">
                       <Icon size={19} />
                     </div>
                     <div>

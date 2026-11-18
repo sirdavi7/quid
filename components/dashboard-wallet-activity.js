@@ -326,7 +326,7 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
           <select
             value={typeFilter}
             onChange={(event) => setTypeFilter(event.target.value)}
-            className="h-11 rounded-md border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition-[border-color,box-shadow] focus:border-arc focus:ring-4 focus:ring-arc/10"
+            className="h-11 rounded-xl border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition-[border-color,box-shadow] focus:border-arc focus:ring-4 focus:ring-arc/10"
           >
             <option>All types</option>
             <option>Receive</option>
@@ -339,7 +339,7 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
           <select
             value={tokenFilter}
             onChange={(event) => setTokenFilter(event.target.value)}
-            className="h-11 rounded-md border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition-[border-color,box-shadow] focus:border-arc focus:ring-4 focus:ring-arc/10"
+            className="h-11 rounded-xl border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition-[border-color,box-shadow] focus:border-arc focus:ring-4 focus:ring-arc/10"
           >
             <option>All tokens</option>
             {tokens.map((token) => (
@@ -353,7 +353,7 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
           <select
             value={chainFilter}
             onChange={(event) => setChainFilter(event.target.value)}
-            className="h-11 rounded-md border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition-[border-color,box-shadow] focus:border-arc focus:ring-4 focus:ring-arc/10"
+            className="h-11 rounded-xl border border-arc/20 bg-white px-3 text-sm font-bold text-ink outline-none transition-[border-color,box-shadow] focus:border-arc focus:ring-4 focus:ring-arc/10"
           >
             <option>All chains</option>
             {chains.map((chain) => (
@@ -375,7 +375,7 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
       </div>
 
       {error ? (
-        <p className="mt-4 rounded-md border border-arc/20 bg-haze/70 px-3 py-2 text-sm font-semibold text-ink/65">
+        <p className="mt-4 rounded-xl border border-arc/20 bg-haze/70 px-3 py-2 text-sm font-semibold text-ink/65">
           {error}
         </p>
       ) : null}
@@ -441,7 +441,7 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
       ) : null}
 
       {showEmptyState ? (
-        <div className="mt-5 rounded-md border border-dashed border-arc/25 bg-haze/70 p-5">
+        <div className="mt-5 rounded-xl border border-dashed border-arc/25 bg-haze/70 p-5">
           <h3 className="font-black text-ink">No wallet transactions found yet</h3>
           <p className="mt-2 text-sm leading-6 text-ink/60">
             Faucet deposits, direct receives, sends, and withdrawals will appear here after Quid indexes them.

@@ -5,15 +5,15 @@
 @tailwind utilities;
 @layer components {
   .quid-secondary-action {
-    @apply inline-flex h-10 items-center justify-center gap-2 rounded-md border border-arc/20 bg-transparent px-3 text-sm font-bold text-arc shadow-panel;
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-arc/20 bg-transparent px-3 text-sm font-bold text-arc shadow-panel;
   }
 
   .quid-primary-action {
-    @apply inline-flex h-10 items-center justify-center gap-2 rounded-md border border-arc/30 bg-gradient-to-r from-arc to-violet px-3 text-sm font-bold text-white shadow-glow;
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-arc/30 bg-gradient-to-r from-arc to-violet px-3 text-sm font-bold text-white shadow-glow;
   }
 
   .quid-card {
-    @apply rounded-lg border border-arc/20 bg-white shadow-panel;
+    @apply rounded-2xl border border-arc/20 bg-white shadow-panel;
   }
 }
 
@@ -159,8 +159,8 @@ a:hover .quid-logo-mark,
 
 .quid-secondary-action:focus-visible,
 .quid-primary-action:focus-visible {
-  outline: 3px solid rgb(var(--color-arc) / 0.22);
-  outline-offset: 3px;
+  outline: 2px solid rgb(var(--color-arc) / 0.4);
+  outline-offset: 2px;
 }
 
 button:disabled {
@@ -198,8 +198,10 @@ button:disabled {
   .quid-logo-mark,
   a[href][class*='rounded-md'],
   a[href][class*='rounded-lg'],
+  a[href][class*='rounded-xl'],
   button[class*='rounded-md'],
   button[class*='rounded-lg'],
+  button[class*='rounded-xl'],
   .quid-secondary-action,
   .quid-primary-action,
   .scroll-reveal,
@@ -211,8 +213,10 @@ button:disabled {
   .quid-logo-mark:hover,
   a[href][class*='rounded-md']:hover,
   a[href][class*='rounded-lg']:hover,
+  a[href][class*='rounded-xl']:hover,
   button[class*='rounded-md']:not(:disabled):hover,
   button[class*='rounded-lg']:not(:disabled):hover,
+  button[class*='rounded-xl']:not(:disabled):hover,
   .quid-secondary-action:hover,
   .quid-primary-action:not(:disabled):hover,
   .scroll-reveal,
@@ -246,4 +250,46 @@ button.no-motion-button:active {
   color: rgb(var(--color-arc)) !important;
   transform: translateY(-50%) !important;
   transition: none !important;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+#product,
+#why-quid,
+#faq {
+  scroll-margin-top: 6.5rem;
+}
+
+/* Cards built inline as rounded-lg + shadow-panel follow the header's softer radius. */
+:where(div, section, article, aside, form).shadow-panel.rounded-lg {
+  border-radius: 1rem;
+}
+
+/* Gentle page fade-in. Opacity only, so the fixed header keeps its viewport anchoring. */
+@keyframes quid-page-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+main {
+  animation: quid-page-fade 260ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main {
+    animation: none;
+  }
 }

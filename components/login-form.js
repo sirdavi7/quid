@@ -253,18 +253,18 @@ export function LoginForm({ nextPath = '/dashboard' }) {
 
   return (
     <form onSubmit={handlePasswordSubmit} className="rounded-lg border border-ink/10 bg-white p-5 shadow-panel">
-      <div className="grid grid-cols-2 rounded-md border border-arc/15 bg-haze p-1">
+      <div className="grid grid-cols-2 rounded-xl border border-arc/15 bg-haze p-1">
         <button
           type="button"
           onClick={() => switchMode('sign-in')}
-          className={`h-10 rounded-md text-sm font-bold ${mode === 'sign-in' ? 'bg-arc text-white shadow-sm' : 'text-ink/55 hover:text-arc'}`}
+          className={`h-10 rounded-xl text-sm font-bold ${mode === 'sign-in' ? 'bg-arc text-white shadow-sm' : 'text-ink/55 hover:text-arc'}`}
         >
           Sign in
         </button>
         <button
           type="button"
           onClick={() => switchMode('create-account')}
-          className={`h-10 rounded-md text-sm font-bold ${mode === 'create-account' ? 'bg-arc text-white shadow-sm' : 'text-ink/55 hover:text-arc'}`}
+          className={`h-10 rounded-xl text-sm font-bold ${mode === 'create-account' ? 'bg-arc text-white shadow-sm' : 'text-ink/55 hover:text-arc'}`}
         >
           Create account
         </button>
@@ -295,7 +295,7 @@ export function LoginForm({ nextPath = '/dashboard' }) {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="h-12 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+            className="h-12 rounded-xl border border-ink/15 px-3 outline-none focus:border-arc"
             placeholder="you@example.com"
             autoComplete="email"
             required
@@ -309,7 +309,7 @@ export function LoginForm({ nextPath = '/dashboard' }) {
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="h-12 w-full rounded-md border border-ink/15 px-3 pr-12 outline-none focus:border-arc"
+              className="h-12 w-full rounded-xl border border-ink/15 px-3 pr-12 outline-none focus:border-arc"
               placeholder="At least 8 characters"
               autoComplete={isCreating ? 'new-password' : 'current-password'}
               minLength={8}
@@ -318,7 +318,7 @@ export function LoginForm({ nextPath = '/dashboard' }) {
             <button
               type="button"
               onClick={() => setShowPassword((current) => !current)}
-              className="no-motion-button absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md border border-transparent text-arc"
+              className="no-motion-button absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg border border-transparent text-arc"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               title={showPassword ? 'Hide password' : 'Show password'}
             >
@@ -328,8 +328,8 @@ export function LoginForm({ nextPath = '/dashboard' }) {
         </label>
       </div>
 
-      {status ? <p className="mt-4 rounded-md bg-mint/20 px-3 py-2 text-sm font-semibold text-ink">{status}</p> : null}
-      {error ? <p className="mt-4 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">{error}</p> : null}
+      {status ? <p className="mt-4 rounded-xl bg-mint/20 px-3 py-2 text-sm font-semibold text-ink">{status}</p> : null}
+      {error ? <p className="mt-4 rounded-xl bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">{error}</p> : null}
 
       <button
         type="submit"
@@ -346,7 +346,7 @@ export function LoginForm({ nextPath = '/dashboard' }) {
             type="button"
             onClick={handlePasswordReset}
             disabled={isSubmitting}
-            className="mt-3 h-10 w-full rounded-md text-sm font-bold text-ink/60 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-3 h-10 w-full rounded-xl text-sm font-bold text-ink/60 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pendingAction === 'password-reset' ? 'Sending reset link...' : 'Forgot password?'}
           </button>
@@ -379,7 +379,7 @@ export function LoginForm({ nextPath = '/dashboard' }) {
             <button
               type="button"
               onClick={() => setShowMagicLink(true)}
-              className="mt-3 h-10 w-full rounded-md text-sm font-bold text-ink/60 hover:text-ink"
+              className="mt-3 h-10 w-full rounded-xl text-sm font-bold text-ink/60 hover:text-ink"
             >
               Use email link instead
             </button>

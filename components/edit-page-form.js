@@ -53,7 +53,7 @@ export function EditPageForm({ page }) {
           <input
             value={form.name}
             onChange={(event) => updateField('name', event.target.value)}
-            className="h-12 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+            className="h-12 rounded-xl border border-ink/15 px-3 outline-none focus:border-arc"
             required
           />
         </label>
@@ -63,7 +63,7 @@ export function EditPageForm({ page }) {
           <input
             value={form.headline}
             onChange={(event) => updateField('headline', event.target.value)}
-            className="h-12 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+            className="h-12 rounded-xl border border-ink/15 px-3 outline-none focus:border-arc"
             placeholder="USDC payments accepted here"
             required
           />
@@ -74,12 +74,12 @@ export function EditPageForm({ page }) {
           <textarea
             value={form.note}
             onChange={(event) => updateField('note', event.target.value)}
-            className="min-h-28 rounded-md border border-ink/15 p-3 outline-none focus:border-arc"
+            className="min-h-28 rounded-xl border border-ink/15 p-3 outline-none focus:border-arc"
             placeholder="Add what people should know before paying you."
           />
         </label>
 
-        <div className="rounded-md border border-arc/20 bg-haze p-3">
+        <div className="rounded-xl border border-arc/20 bg-haze p-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase text-arc">Saved public page</p>
@@ -96,7 +96,7 @@ export function EditPageForm({ page }) {
         </div>
       </div>
 
-      {error ? <p className="mt-4 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">{error}</p> : null}
+      {error ? <p className="mt-4 rounded-xl bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">{error}</p> : null}
 
       <button
         type="submit"

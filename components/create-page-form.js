@@ -51,7 +51,7 @@ export function CreatePageForm() {
           <input
             value={form.name}
             onChange={(event) => updateField('name', event.target.value)}
-            className="h-12 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+            className="h-12 rounded-xl border border-ink/15 px-3 outline-none focus:border-arc"
             placeholder="David Obi"
             required
           />
@@ -59,7 +59,7 @@ export function CreatePageForm() {
 
         <label className="grid gap-2">
           <span className="text-sm font-bold text-ink">Quid username</span>
-          <div className="flex h-12 overflow-hidden rounded-md border border-ink/15 focus-within:border-arc">
+          <div className="flex h-12 overflow-hidden rounded-xl border border-ink/15 focus-within:border-arc">
             <span className="flex items-center bg-ink/5 px-3 text-sm font-semibold text-ink/50">
               /pay/
             </span>
@@ -78,7 +78,7 @@ export function CreatePageForm() {
           <input
             value={form.headline}
             onChange={(event) => updateField('headline', event.target.value)}
-            className="h-12 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+            className="h-12 rounded-xl border border-ink/15 px-3 outline-none focus:border-arc"
             placeholder="Test USDC payments"
             required
           />
@@ -89,14 +89,14 @@ export function CreatePageForm() {
           <textarea
             value={form.note}
             onChange={(event) => updateField('note', event.target.value)}
-            className="min-h-28 rounded-md border border-ink/15 p-3 outline-none focus:border-arc"
+            className="min-h-28 rounded-xl border border-ink/15 p-3 outline-none focus:border-arc"
             placeholder="Thanks for paying with USDC."
           />
         </label>
       </div>
 
       {error ? (
-        <p className="mt-4 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
+        <p className="mt-4 rounded-xl bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
           {error}
         </p>
       ) : null}

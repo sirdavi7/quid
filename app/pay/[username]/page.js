@@ -8,8 +8,6 @@ import { PayActions } from '@/components/pay-actions'
 import { CopyAddressButton } from '@/components/copy-address-button'
 import { ReceiveCard } from '@/components/receive-card'
 import { ScanPayCard } from '@/components/scan-pay-card'
-import { DashboardNavMenu } from '@/components/dashboard-nav-menu'
-import { CreateNavButton, FaucetNavButton, HomeNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { getPage, getPageForOwner, listWalletsForPage } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -65,31 +63,31 @@ export default async function PayPage({ params, searchParams }) {
   return (
     <>
       <main className="min-h-screen bg-paper">
-        <AppHeader>
-          <HomeNavButton />
-          {user ? <DashboardNavMenu username={viewerPage?.username} /> : <CreateNavButton label="Create yours" />}
-          {user ? <SignOutNavButton /> : null}
-          <FaucetNavButton />
-        </AppHeader>
+        <AppHeader
+          showWallet
+          account={user ? { email: user.email, username: viewerPage?.username } : null}
+        />
 
         {isOwner ? (
-          <section className="mx-auto max-w-6xl px-5 pt-8 sm:pt-10">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-arc/20 bg-haze px-4 py-3 text-sm text-ink shadow-panel">
+          <section className="mx-auto max-w-6xl px-5 pt-4 sm:pt-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-arc/20 bg-arc/10 px-4 py-3 text-sm text-ink backdrop-blur-xl">
               <div className="flex items-center gap-2 font-semibold">
-                <Eye size={16} className="text-arc" />
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-arc/15 text-arc">
+                  <Eye size={16} />
+                </span>
                 You are viewing your public payment page as the owner.
               </div>
-              <Link href="/settings" className="inline-flex h-9 items-center gap-2 rounded-md bg-arc px-3 text-xs font-bold text-white shadow-glow">
+              <Link href="/settings" className="quid-primary-action h-9 px-3 text-xs">
                 <Settings size={14} /> Edit page details
               </Link>
             </div>
           </section>
         ) : null}
 
-        <section className="mx-auto grid max-w-6xl gap-6 px-5 pb-8 pt-8 xl:grid-cols-[0.9fr_1.1fr]">
+        <section className="mx-auto grid max-w-6xl gap-6 px-5 pb-8 pt-6 sm:pt-8 xl:grid-cols-[0.9fr_1.1fr]">
           <aside className="order-2 rounded-lg border border-ink/10 bg-white p-5 shadow-panel xl:order-1">
             <div className="flex items-center gap-3">
-              <div className="grid h-14 w-14 place-items-center rounded-md bg-arc text-2xl font-black text-white">
+              <div className="grid h-14 w-14 place-items-center rounded-xl bg-arc text-2xl font-black text-white">
                 {page.name.slice(0, 1).toUpperCase()}
               </div>
               <div>
@@ -98,21 +96,21 @@ export default async function PayPage({ params, searchParams }) {
               </div>
             </div>
 
-            <div className="mt-6 rounded-md border border-arc/20 bg-haze p-4 text-ink">
+            <div className="mt-6 rounded-xl border border-arc/20 bg-haze p-4 text-ink">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-black uppercase text-arc">{page.headline}</p>
                   <p className="mt-3 text-sm leading-6 text-ink/70">{page.note || 'USDC payments accepted on Arc Testnet.'}</p>
                 </div>
                 {isOwner ? (
-                  <Link href="/settings" className="inline-flex shrink-0 items-center gap-1 rounded-md border border-arc/20 bg-white px-2 py-1 text-xs font-bold text-arc">
+                  <Link href="/settings" className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-arc/20 bg-white px-2 py-1 text-xs font-bold text-arc">
                     <Settings size={13} /> Edit
                   </Link>
                 ) : null}
               </div>
             </div>
 
-            <div className="mt-4 rounded-md border border-ink/10 bg-paper p-4">
+            <div className="mt-4 rounded-xl border border-ink/10 bg-paper p-4">
               <div className="flex items-center gap-2 text-sm font-bold text-ink/60">
                 <WalletCards size={17} /> Arc recipient
               </div>

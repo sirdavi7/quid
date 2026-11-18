@@ -1,6 +1,6 @@
 import { AppHeader } from '@/components/app-header'
+import { PageHeading } from '@/components/page-heading'
 import { AppFooter } from '@/components/app-footer'
-import { CreateNavButton, FaucetNavButton, HomeNavButton } from '@/components/nav-buttons'
 import { Suspense } from 'react'
 import { LoginForm } from '@/components/login-form'
 import { redirect } from 'next/navigation'
@@ -24,21 +24,16 @@ export default async function LoginPage({ searchParams }) {
 
   return (
     <main className="min-h-screen bg-paper">
-      <AppHeader>
-        <HomeNavButton />
-        <CreateNavButton label="Create" />
-        <FaucetNavButton />
-      </AppHeader>
+      <AppHeader />
 
-      <section className="mx-auto grid max-w-5xl gap-8 px-5 py-10 md:grid-cols-[0.9fr_1.1fr]">
+      <section className="mx-auto grid max-w-5xl gap-8 px-5 pb-10 pt-6 sm:pt-8 md:grid-cols-[0.9fr_1.1fr]">
         <div>
-          <p className="text-sm font-bold uppercase text-arc">Login</p>
-          <h1 className="mt-3 text-4xl font-black leading-tight text-ink md:text-5xl">
-            Access your Quid workspace.
-          </h1>
-          <p className="mt-4 text-lg leading-8 text-ink/65">
-            Create an account or sign in to manage your payment link, creator wallet controls, and USDC payout workflow.
-          </p>
+          <PageHeading
+            size="hero"
+            eyebrow="Login"
+            title="Access your Quid workspace."
+            description="Create an account or sign in to manage your payment link, creator wallet controls, and USDC payout workflow."
+          />
         </div>
         <Suspense fallback={null}>
           <LoginForm nextPath={next} />

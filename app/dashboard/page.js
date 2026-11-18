@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AppHeader } from '@/components/app-header'
+import { PageHeading } from '@/components/page-heading'
 import { AppFooterStrip } from '@/components/app-footer-strip'
 import { redirect } from 'next/navigation'
 import { Clock3, Droplets, ExternalLink, Plus, ReceiptText, Settings, WalletCards } from 'lucide-react'
@@ -11,8 +12,6 @@ import { PaymentReceiptButton } from '@/components/payment-receipt-button'
 import { TransactionStatusSync } from '@/components/transaction-status-sync'
 import { UsdcMark } from '@/components/usdc-mark'
 import { LocalTimestamp } from '@/components/local-timestamp'
-import { DashboardNavMenu } from '@/components/dashboard-nav-menu'
-import { FaucetNavButton, HomeNavButton, CreateNavButton, SignOutNavButton } from '@/components/nav-buttons'
 import { addressOrQuidPageLabel } from '@/lib/address-aliases'
 import { getPaymentSummaryForOwner, getQuidPageAliasesForAddresses, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -149,26 +148,19 @@ export default async function DashboardPage() {
     <>
       <main className="min-h-screen bg-paper">
         <TransactionStatusSync ownerId={user.id} hasSubmittedPayments={payments.some(needsPaymentLifecycleSync)} />
-        <AppHeader>
-          <HomeNavButton />
-          <DashboardNavMenu username={primaryPage?.username} />
-          <SignOutNavButton />
-          <FaucetNavButton />
-        </AppHeader>
+        <AppHeader showWallet account={{ email: user.email, username: primaryPage?.username }} />
 
-        <section className="mx-auto max-w-6xl px-5 pb-10 pt-12 sm:pt-14">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-sm font-bold uppercase text-arc">Dashboard</p>
-            <h1 className="mt-2 text-4xl font-black text-ink">Your Quid workspace</h1>
-            <p className="mt-3 text-ink/60">{user.email}</p>
-          </div>
-          {!primaryPage ? (
+        <section className="mx-auto max-w-6xl px-5 pb-10 pt-6 sm:pt-8">
+        <PageHeading
+          eyebrow="Dashboard"
+          title="Your Quid workspace"
+          description={user.email}
+          action={!primaryPage ? (
             <Link href="/create" className="quid-primary-action h-11 px-4">
               <Plus size={18} /> Create payment page
             </Link>
           ) : null}
-        </div>
+        />
 
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {primaryPage ? (
@@ -206,7 +198,7 @@ export default async function DashboardPage() {
         <section className="mt-6 rounded-lg border border-arc/20 bg-haze p-5 shadow-panel">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-md bg-arc text-white shadow-glow">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-arc text-white shadow-glow">
                 <Droplets size={20} />
               </div>
               <div>
@@ -252,7 +244,7 @@ export default async function DashboardPage() {
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-3">
-                          <div className="grid h-11 w-11 place-items-center rounded-md bg-arc text-lg font-black text-white">
+                          <div className="grid h-11 w-11 place-items-center rounded-xl bg-arc text-lg font-black text-white">
                             {page.name.slice(0, 1).toUpperCase()}
                           </div>
                           <div>
@@ -272,7 +264,7 @@ export default async function DashboardPage() {
                         </Link>
                       </div>
                     </div>
-                    <div className="mt-4 inline-flex items-center gap-2 rounded-md bg-paper px-3 py-2 text-xs font-bold text-ink/60">
+                    <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-paper px-3 py-2 text-xs font-bold text-ink/60">
                       <WalletCards size={15} /> {page.walletMocked ? 'Demo wallet' : 'Circle wallet'}
                     </div>
                   </article>
@@ -313,7 +305,7 @@ export default async function DashboardPage() {
                         </p>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className={`rounded-md px-2 py-1 text-xs font-bold uppercase ${paymentStatusClass(payment.status)}`}>
+                        <span className={`rounded-lg px-2 py-1 text-xs font-bold uppercase ${paymentStatusClass(payment.status)}`}>
                           {paymentStatusLabel(payment.status)}
                         </span>
                         <PaymentReceiptButton payment={payment} explorerUrl={paymentExplorerUrl(payment)} addressAliases={addressAliases} />
@@ -328,7 +320,7 @@ export default async function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="mt-5 rounded-md border border-dashed border-arc/25 bg-haze/70 p-5">
+              <div className="mt-5 rounded-xl border border-dashed border-arc/25 bg-haze/70 p-5">
                 <h3 className="font-black text-ink">No payments recorded yet</h3>
                 <p className="mt-2 text-sm leading-6 text-ink/60">
                   Quid checkout payments and owner withdrawals will appear here with amount, wallet, chain, and receipt links.

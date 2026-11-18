@@ -195,7 +195,7 @@ export function ScanPayCard() {
           <p className="text-xs font-black uppercase text-arc">Scan to pay</p>
           <h2 className="mt-2 text-2xl font-black text-ink">Open a Quid QR payment.</h2>
         </div>
-        <div className="grid h-11 w-11 place-items-center rounded-md border border-arc/20 bg-haze text-arc">
+        <div className="grid h-11 w-11 place-items-center rounded-xl border border-arc/20 bg-haze text-arc">
           <QrCode size={20} />
         </div>
       </div>
@@ -226,7 +226,7 @@ export function ScanPayCard() {
           <input
             value={paymentLink}
             onChange={(event) => setPaymentLink(event.target.value)}
-            className="h-11 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+            className="h-11 rounded-xl border border-ink/15 px-3 outline-none focus:border-arc"
             placeholder="/pay/username?amount=5"
           />
         </label>
@@ -250,14 +250,14 @@ export function ScanPayCard() {
           <input type="file" accept="image/*" onChange={handleUpload} className="sr-only" />
         </label>
         {detectorAvailable === false ? (
-          <span className="inline-flex min-h-10 items-center rounded-md bg-haze px-3 text-xs font-bold text-ink/55">
+          <span className="inline-flex min-h-10 items-center rounded-xl bg-haze px-3 text-xs font-bold text-ink/55">
             Paste link supported
           </span>
         ) : null}
       </div>
 
       {error ? (
-        <p className="mt-4 flex gap-2 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
+        <p className="mt-4 flex gap-2 rounded-xl bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
           <AlertCircle size={18} /> {error}
         </p>
       ) : null}

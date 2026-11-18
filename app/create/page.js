@@ -1,9 +1,8 @@
 import { AppHeader } from '@/components/app-header'
+import { PageHeading } from '@/components/page-heading'
 import { AppFooter } from '@/components/app-footer'
 import { redirect } from 'next/navigation'
 import { CreatePageForm } from '@/components/create-page-form'
-import { DashboardNavMenu } from '@/components/dashboard-nav-menu'
-import { FaucetNavButton, HomeNavButton } from '@/components/nav-buttons'
 import { getPageForOwner } from '@/lib/store'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -34,21 +33,16 @@ export default async function CreatePage() {
 
   return (
     <main className="min-h-screen bg-paper">
-      <AppHeader>
-        <HomeNavButton />
-        <DashboardNavMenu />
-        <FaucetNavButton />
-      </AppHeader>
+      <AppHeader account={{ email: user.email }} />
 
-      <section className="mx-auto grid max-w-6xl gap-8 px-5 py-10 lg:grid-cols-[0.85fr_1.15fr]">
+      <section className="mx-auto grid max-w-6xl gap-8 px-5 pb-10 pt-6 sm:pt-8 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
-          <p className="text-sm font-bold uppercase text-arc">Create</p>
-          <h1 className="mt-3 text-4xl font-black leading-tight text-ink md:text-5xl">
-            Generate a pay-me link backed by an Arc Testnet wallet.
-          </h1>
-          <p className="mt-4 text-lg leading-8 text-ink/65">
-            Quid creates a Circle developer-controlled wallet when your Circle credentials are configured. In local demo mode it creates a mock address so the interface stays usable.
-          </p>
+          <PageHeading
+            size="hero"
+            eyebrow="Create"
+            title="Generate a pay-me link backed by an Arc Testnet wallet."
+            description="Quid creates a Circle developer-controlled wallet when your Circle credentials are configured. In local demo mode it creates a mock address so the interface stays usable."
+          />
         </div>
         <CreatePageForm />
       </section>

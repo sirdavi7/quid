@@ -71,7 +71,7 @@ export function NetworkFeeSummary({ quote, amount, amountLabel, feeTotalLabel = 
   const feeTotals = feeTotalLabel ? totalFeesByAsset(feeItems) : []
 
   return (
-    <div className={`rounded-md border border-arc/20 bg-haze p-4 ${className}`.trim()}>
+    <div className={`rounded-xl border border-arc/20 bg-haze p-4 ${className}`.trim()}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-black uppercase text-arc">Network and fee</p>
         <p className="text-xs font-bold text-ink/55">

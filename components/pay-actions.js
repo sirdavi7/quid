@@ -717,7 +717,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
             <UsdcAmountInput
               value={payForm.amount}
               onChange={(event) => setPayForm((current) => ({ ...current, amount: event.target.value }))}
-              className="h-11 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+              className="h-11 rounded-xl border border-ink/15 px-3 outline-none focus:border-arc"
               inputMode="decimal"
             />
           </label>
@@ -726,7 +726,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
             <select
               value={payForm.sourceChainId}
               onChange={(event) => setPayForm((current) => ({ ...current, sourceChainId: event.target.value }))}
-              className="h-11 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+              className="h-11 rounded-xl border border-ink/15 px-3 outline-none focus:border-arc"
             >
               {chainOptions.map((option) => (
                 <option key={option.id} value={option.id}>
@@ -740,7 +740,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
         {feePreview.state === 'ready' ? (
           <NetworkFeeSummary className="mt-4" quote={feePreview} amount={payForm.amount} amountLabel="Payment amount" />
         ) : (
-          <div className="mt-4 rounded-md border border-arc/15 bg-haze/70 px-3 py-3">
+          <div className="mt-4 rounded-xl border border-arc/15 bg-haze/70 px-3 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-black uppercase text-arc">Network and fee</p>
               <p className="text-xs font-bold text-ink/55">
@@ -776,7 +776,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
           </p>
         ) : null}
         {hasLowSourceUsdcBalance ? (
-          <p className="mt-3 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
+          <p className="mt-3 rounded-xl bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
             This wallet has less USDC on {selectedSource.label} than the entered amount. Add {selectedSource.label} test USDC or choose a funded source chain.
           </p>
         ) : null}
@@ -792,7 +792,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
               <input
                 value={sendForm.recipient}
                 onChange={(event) => setSendForm((current) => ({ ...current, recipient: event.target.value }))}
-                className="h-11 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+                className="h-11 rounded-xl border border-ink/15 px-3 outline-none focus:border-arc"
                 placeholder="0x..."
               />
             </label>
@@ -801,7 +801,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
             <UsdcAmountInput
               value={sendForm.amount}
               onChange={(event) => setSendForm((current) => ({ ...current, amount: event.target.value }))}
-              className="h-11 rounded-md border border-ink/15 px-3 outline-none focus:border-arc"
+              className="h-11 rounded-xl border border-ink/15 px-3 outline-none focus:border-arc"
                 inputMode="decimal"
               />
             </label>
@@ -818,7 +818,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
 
       <PaymentStatusCard initialPayment={transaction} />
       {error ? (
-        <p className="flex gap-2 rounded-md bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
+        <p className="flex gap-2 rounded-xl bg-coral/10 px-3 py-2 text-sm font-semibold text-coral">
           <AlertCircle size={18} /> {error}
         </p>
       ) : null}

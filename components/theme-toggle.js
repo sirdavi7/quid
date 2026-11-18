@@ -9,7 +9,7 @@ function applyTheme(theme) {
   document.documentElement.classList.toggle('dark', theme === 'dark')
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }) {
   const [theme, setTheme] = useState('light')
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-      className={`${navButtonClass} w-10 px-0`}
+      className={className ?? `${navButtonClass} w-10 px-0`}
       title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
     >
       {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}

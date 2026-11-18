@@ -73,7 +73,7 @@ export function PaymentStatusCard({ initialPayment }) {
 
   return (
     <div
-      className={`rounded-md border p-4 ${
+      className={`rounded-xl border p-4 ${
         failed
           ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/25 dark:text-red-100'
           : 'border-arc/20 bg-haze text-ink'
