@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createPublicClient, formatUnits, http, parseAbiItem } from 'viem'
 import { arcTestnet, ARC_EXPLORER_URL, ARC_TESTNET_ID } from '@/lib/arc'
+import { fetchIncomingUsdcTransfers } from '@/lib/arcscan'
 import { chains, chainOptions } from '@/lib/chains'
 import { getServerRpcUrl } from '@/lib/server-rpc'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -70,6 +71,55 @@ async function getIncomingTransferLogs({ chainClient, option, walletAddress }) {
   }
 
   return logs
+}
+
+// Arc is fast, so a fixed block window only covers a few minutes. Instead, read
+// the explorer for everything received after the newest incoming transfer Quid
+// has already recorded for this wallet, however long ago that was.
+const CURSOR_SAFETY_MS = 10 * 60 * 1000
+
+function newestRecordedIncomingMs(storedActivity, wallet, option) {
+  let newest = null
+
+  for (const activity of storedActivity) {
+    const sameWallet = String(activity.toAddress ?? '').toLowerCase() === String(wallet.walletAddress).toLowerCase()
+    const sameChain = String(activity.chain ?? '').toLowerCase() === String(option.label).toLowerCase()
+    const time = Date.parse(activity.happenedAt)
+
+    if (sameWallet && sameChain && Number.isFinite(time) && (newest === null || time > newest)) {
+      newest = time
+    }
+  }
+
+  return newest
+}
+
+async function indexArcTransfers({ option, wallet, page, knownTxHashes, storedActivity }) {
+  const newest = newestRecordedIncomingMs(storedActivity, wallet, option)
+  const { records: transfers } = await fetchIncomingUsdcTransfers({
+    walletAddress: wallet.walletAddress,
+    usdcAddress: option.usdcAddress,
+    sinceMs: newest === null ? null : newest - CURSOR_SAFETY_MS
+  })
+
+  return transfers
+    .filter((transfer) => !knownTxHashes.has(transfer.txHash))
+    .map((transfer) => ({
+      pageId: page.id,
+      ownerId: page.ownerId,
+      pageUsername: page.username,
+      walletAddress: wallet.walletAddress,
+      fromAddress: transfer.fromAddress,
+      toAddress: transfer.toAddress,
+      amount: transfer.amount,
+      asset: 'USDC',
+      chain: option.label,
+      txHash: transfer.txHash,
+      explorerUrl: getExplorerUrl(option, 'tx', transfer.txHash),
+      source: sourceLabel(transfer.fromAddress),
+      blockNumber: transfer.blockNumber,
+      happenedAt: transfer.happenedAt
+    }))
 }
 
 function sourceLabel(fromAddress) {
@@ -150,6 +200,11 @@ export async function POST() {
         .filter(Boolean)
         .map((hash) => hash.toLowerCase())
     )
+    const storedActivity = await listWalletActivityForOwner(user.id, 500)
+    const knownTxHashes = new Set([
+      ...checkoutTxHashes,
+      ...storedActivity.map((activity) => String(activity.txHash ?? '').toLowerCase()).filter(Boolean)
+    ])
     const warnings = []
     const records = []
 
@@ -158,6 +213,16 @@ export async function POST() {
 
       if (!option?.usdcAddress || !wallet.walletAddress) {
         continue
+      }
+
+      if (option.id === ARC_TESTNET_ID) {
+        try {
+          records.push(...await indexArcTransfers({ option, wallet, page, knownTxHashes, storedActivity }))
+          continue
+        } catch (error) {
+          // If the explorer is unavailable, fall back to the recent-blocks check below.
+          logServerError(`Arc explorer history ${option.label}`, error)
+        }
       }
 
       try {
