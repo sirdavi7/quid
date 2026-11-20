@@ -132,7 +132,7 @@ export default async function DashboardPage() {
   const summary = await getPaymentSummaryForOwner(user.id)
   const primaryPage = pages[0]
   const pageWallets = primaryPage ? await listWalletsForPage(primaryPage.id) : []
-  const walletActivities = await listWalletActivityForOwner(user.id, 30)
+  const walletActivities = await listWalletActivityForOwner(user.id, 100)
   const addressAliases = await getQuidPageAliasesForAddresses([
     ...payments.flatMap((payment) => [payment.payerAddress, payment.recipientAddress]),
     ...walletActivities.flatMap((activity) => [activity.fromAddress, activity.toAddress])

@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createPublicClient, formatUnits, http, parseAbiItem } from 'viem'
 import { arcTestnet, ARC_EXPLORER_URL, ARC_TESTNET_ID } from '@/lib/arc'
+import { fetchIncomingUsdcTransfers } from '@/lib/arcscan'
 import { chains, chainOptions } from '@/lib/chains'
 import { getServerRpcUrl } from '@/lib/server-rpc'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getSafeApiError, logServerError } from '@/lib/user-errors'
-import { getQuidPageAliasesForAddresses, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, upsertWalletActivityRecords } from '@/lib/store'
+import { createPaymentRecord, getQuidPageAliasesForAddresses, listPagesForOwner, listPaymentsForOwner, listWalletActivityForOwner, listWalletsForPage, upsertWalletActivityRecords } from '@/lib/store'
 
 const transferEvent = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 const zeroAddress = '0x0000000000000000000000000000000000000000'
+// Direct deposits recorded as payments per request. Any remainder is picked up
+// by the next sync, so one request never runs unbounded.
+const MAX_DEPOSIT_PAYMENTS_PER_RUN = 30
+const DEEP_SYNC_PAGES = 6
 
 function createChainClient(option) {
   const chain = option.id === ARC_TESTNET_ID
@@ -72,6 +77,73 @@ async function getIncomingTransferLogs({ chainClient, option, walletAddress }) {
   return logs
 }
 
+async function scanRecentLogs({ option, wallet, page, checkoutTxHashes }) {
+  const chainClient = createChainClient(option)
+  const logs = await getIncomingTransferLogs({
+    chainClient,
+    option,
+    walletAddress: wallet.walletAddress
+  })
+  const recentLogs = logs
+    .filter((log) => !checkoutTxHashes.has(log.transactionHash.toLowerCase()))
+    .sort((a, b) => Number(b.blockNumber - a.blockNumber))
+    .slice(0, 8)
+  const blocks = await Promise.all(
+    recentLogs.map((log) => chainClient.getBlock({ blockNumber: log.blockNumber }))
+  )
+
+  return recentLogs.map((log, index) => ({
+    pageId: page.id,
+    ownerId: page.ownerId,
+    pageUsername: page.username,
+    walletAddress: wallet.walletAddress,
+    fromAddress: log.args.from,
+    toAddress: log.args.to,
+    amount: formatUnits(log.args.value, 6),
+    asset: 'USDC',
+    chain: option.label,
+    txHash: log.transactionHash,
+    explorerUrl: getExplorerUrl(option, 'tx', log.transactionHash),
+    source: sourceLabel(log.args.from),
+    blockNumber: log.blockNumber.toString(),
+    happenedAt: new Date(Number(blocks[index].timestamp) * 1000).toISOString()
+  }))
+}
+
+// Full incoming history for the Arc wallet from the explorer API. Transfers that
+// Quid has not recorded yet become activity rows and confirmed deposit payments.
+async function indexArcDeposits({ option, wallet, page, paymentHashes, activityHashes, deep }) {
+  const { records: transfers } = await fetchIncomingUsdcTransfers({
+    walletAddress: wallet.walletAddress,
+    usdcAddress: option.usdcAddress,
+    maxPages: deep ? DEEP_SYNC_PAGES : 1,
+    knownTxHashes: paymentHashes,
+    stopWhenPageKnown: !deep
+  })
+
+  // Checkout payments already have a payment row and get their own activity
+  // entry when they are reconciled, so only unrecorded transfers are handled here.
+  const unrecorded = transfers.filter((transfer) => !paymentHashes.has(transfer.txHash))
+
+  return unrecorded.map((transfer) => ({
+    pageId: page.id,
+    ownerId: page.ownerId,
+    pageUsername: page.username,
+    walletAddress: wallet.walletAddress,
+    fromAddress: transfer.fromAddress,
+    toAddress: transfer.toAddress,
+    amount: transfer.amount,
+    asset: 'USDC',
+    chain: option.label,
+    txHash: transfer.txHash,
+    explorerUrl: getExplorerUrl(option, 'tx', transfer.txHash),
+    source: sourceLabel(transfer.fromAddress),
+    blockNumber: transfer.blockNumber,
+    happenedAt: transfer.happenedAt,
+    needsActivity: !activityHashes.has(transfer.txHash)
+  }))
+}
+
 function sourceLabel(fromAddress) {
   return String(fromAddress ?? '').toLowerCase() === zeroAddress ? 'Faucet deposit' : 'Direct deposit'
 }
@@ -121,8 +193,10 @@ function isSyntheticBalanceRecord(activity) {
   return source.includes('balance sync') || source.includes('source not identified') || txHash.startsWith('balance-sync-')
 }
 
-export async function POST() {
+export async function POST(request) {
   try {
+    const body = await request.json().catch(() => ({}))
+    const deep = body?.deep === true
     const supabase = createSupabaseServerClient()
     const { data } = await supabase.auth.getUser()
     const user = data.user
@@ -143,15 +217,24 @@ export async function POST() {
     }
 
     const wallets = await getReceiveWallets(page)
-    const payments = await listPaymentsForOwner(user.id, 100)
-    const checkoutTxHashes = new Set(
+    const [payments, storedActivity] = await Promise.all([
+      listPaymentsForOwner(user.id, 500),
+      listWalletActivityForOwner(user.id, 500)
+    ])
+    const paymentHashes = new Set(
       payments
         .map(paymentTxHash)
         .filter(Boolean)
         .map((hash) => hash.toLowerCase())
     )
+    const activityHashes = new Set(
+      storedActivity
+        .map((activity) => String(activity.txHash ?? '').toLowerCase())
+        .filter(Boolean)
+    )
     const warnings = []
     const records = []
+    const depositPayments = []
 
     for (const wallet of wallets) {
       const option = chainOptions.find((item) => item.id === wallet.chainId)
@@ -160,48 +243,73 @@ export async function POST() {
         continue
       }
 
-      try {
-        const chainClient = createChainClient(option)
-        const logs = await getIncomingTransferLogs({
-          chainClient,
-          option,
-          walletAddress: wallet.walletAddress
-        })
-        const recentLogs = logs
-          .filter((log) => !checkoutTxHashes.has(log.transactionHash.toLowerCase()))
-          .sort((a, b) => Number(b.blockNumber - a.blockNumber))
-          .slice(0, 8)
-        const blocks = await Promise.all(
-          recentLogs.map((log) => chainClient.getBlock({ blockNumber: log.blockNumber }))
-        )
+      let scanned = false
 
-        records.push(...recentLogs.map((log, index) => ({
-          pageId: page.id,
-          ownerId: page.ownerId,
-          pageUsername: page.username,
-          walletAddress: wallet.walletAddress,
-          fromAddress: log.args.from,
-          toAddress: log.args.to,
-          amount: formatUnits(log.args.value, 6),
-          asset: 'USDC',
-          chain: option.label,
-          txHash: log.transactionHash,
-          explorerUrl: getExplorerUrl(option, 'tx', log.transactionHash),
-          source: sourceLabel(log.args.from),
-          blockNumber: log.blockNumber.toString(),
-          happenedAt: new Date(Number(blocks[index].timestamp) * 1000).toISOString()
-        })))
+      if (option.id === ARC_TESTNET_ID) {
+        try {
+          const arcRecords = await indexArcDeposits({ option, wallet, page, paymentHashes, activityHashes, deep })
+          records.push(...arcRecords.filter((record) => record.needsActivity))
+          depositPayments.push(...arcRecords)
+          scanned = true
+        } catch (error) {
+          logServerError(`Arc explorer history ${option.label}`, error)
+          warnings.push('Full Arc transfer history could not be checked right now. Showing recent on-chain activity only.')
+        }
+      }
+
+      if (scanned) {
+        continue
+      }
+
+      try {
+        records.push(...await scanRecentLogs({ option, wallet, page, checkoutTxHashes: paymentHashes }))
       } catch (error) {
         logServerError(`Wallet activity scan ${option.label}`, error)
         warnings.push(getSafeApiError(error, { chainLabel: option.label, nativeSymbol: option.nativeSymbol, fallback: `Latest ${option.label} activity could not be refreshed. Saved wallet transactions are still shown below.` }))
       }
     }
 
-    await upsertWalletActivityRecords(records)
+    const insertedActivity = await upsertWalletActivityRecords(
+      records.map(({ needsActivity, ...record }) => record)
+    )
+
+    // Unrecorded Arc deposits also become confirmed payment rows, so they show in
+    // Quid money movement and Recent activity just like withdrawals do.
+    let depositsRecorded = 0
+    const toRecord = depositPayments
+      .sort((a, b) => Date.parse(b.happenedAt) - Date.parse(a.happenedAt))
+      .slice(0, MAX_DEPOSIT_PAYMENTS_PER_RUN)
+
+    for (const deposit of toRecord) {
+      try {
+        await createPaymentRecord({
+          pageUsername: page.username,
+          payerAddress: deposit.fromAddress,
+          recipientAddress: deposit.walletAddress,
+          amount: deposit.amount,
+          sourceChain: deposit.chain,
+          destinationChain: deposit.chain,
+          txHash: deposit.txHash,
+          explorerUrl: deposit.explorerUrl,
+          blockNumber: deposit.blockNumber,
+          status: 'confirmed',
+          kind: 'incoming',
+          operation: 'direct-deposit',
+          note: deposit.source,
+          confirmedAt: deposit.happenedAt,
+          createdAt: deposit.happenedAt
+        })
+        depositsRecorded += 1
+      } catch (error) {
+        logServerError('Record direct deposit', error)
+        warnings.push('Some received transfers could not be saved yet. They will be retried on the next refresh.')
+        break
+      }
+    }
 
     // A wallet balance delta is not proof of a transaction's sender or route.
     // Show only indexed transfers and Quid-recorded operations in activity.
-    const activities = (await listWalletActivityForOwner(user.id, 30))
+    const activities = (await listWalletActivityForOwner(user.id, 100))
       .filter((activity) => !isSyntheticBalanceRecord(activity))
     const addressAliases = await getQuidPageAliasesForAddresses(
       activities.flatMap((activity) => [activity.fromAddress, activity.toAddress])
@@ -210,8 +318,10 @@ export async function POST() {
     return NextResponse.json({
       activities,
       addressAliases,
-      synced: records.length,
-      warning: warnings.length ? warnings.join('; ') : null
+      synced: insertedActivity.length + depositsRecorded,
+      pending: Math.max(0, depositPayments.length - toRecord.length),
+      checkedAt: new Date().toISOString(),
+      warning: warnings.length ? [...new Set(warnings)].join('; ') : null
     })
   } catch (error) {
     const message = String(error.message ?? '')
