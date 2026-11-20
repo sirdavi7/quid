@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useRouter } from 'next/navigation'
 import { ExternalLink, Loader2, ReceiptText, RefreshCw, WalletCards, X } from 'lucide-react'
 import { chainOptions } from '@/lib/chains'
 import { formatQuidTimestamp } from '@/lib/date-time'
@@ -155,37 +154,21 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
   const [chainFilter, setChainFilter] = useState('All chains')
   const [receipt, setReceipt] = useState(null)
   const [mounted, setMounted] = useState(false)
-  const [notice, setNotice] = useState('')
-  const [lastChecked, setLastChecked] = useState(null)
   const didAutoLoad = useRef(false)
-  const isSyncing = useRef(false)
-  const catchUpRuns = useRef(0)
-  const router = useRouter()
 
-  // deep: read the wallet's full incoming history. silent: background refresh
-  // that does not flash the Syncing state.
-  async function syncActivity({ deep = false, silent = false } = {}) {
+  async function syncActivity() {
     if (walletMocked) {
       setStatus('mocked')
       return
     }
 
-    if (isSyncing.current) {
-      return
-    }
-
-    isSyncing.current = true
-
-    if (!silent) {
-      setStatus('syncing')
-      setError('')
-    }
+    setStatus('syncing')
+    setError('')
 
     try {
       const response = await fetch('/api/arc-activity', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deep })
+        headers: { 'Content-Type': 'application/json' }
       })
       const payload = await response.json().catch(() => ({}))
 
@@ -195,32 +178,11 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
 
       setActivities((payload.activities ?? []).filter((activity) => !isBalanceSync(activity)))
       setKnownAddressAliases((current) => ({ ...current, ...(payload.addressAliases ?? {}) }))
-      setNotice(payload.warning ?? '')
-      setLastChecked(payload.checkedAt ?? new Date().toISOString())
-      setError('')
       setStatus('ready')
-
-      // New transfers change the cards and lists rendered by the page itself.
-      if (Number(payload.synced) > 0) {
-        router.refresh()
-      }
-
-      // Large backlogs are recorded in batches; keep going a few times.
-      if (Number(payload.pending) > 0 && catchUpRuns.current < 5) {
-        catchUpRuns.current += 1
-        window.setTimeout(() => {
-          isSyncing.current = false
-          syncActivity({ deep: true, silent: true })
-        }, 1500)
-        return
-      }
     } catch (err) {
-      setNotice('Latest wallet check failed. Saved transactions are still shown.')
       setError((activities.length || initialActivities.length) ? '' : friendlyActivityError(err.message))
       setStatus('error')
     }
-
-    isSyncing.current = false
   }
 
   useEffect(() => {
@@ -239,28 +201,7 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
     if (didAutoLoad.current) return
 
     didAutoLoad.current = true
-    syncActivity({ deep: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walletMocked])
-
-  // Keep the list current while the tab is open: a quick check every 30 seconds
-  // and whenever you return to the tab.
-  useEffect(() => {
-    if (walletMocked) return undefined
-
-    function quickSync() {
-      if (document.visibilityState === 'visible') {
-        syncActivity({ silent: true })
-      }
-    }
-
-    const interval = window.setInterval(quickSync, 30000)
-    document.addEventListener('visibilitychange', quickSync)
-
-    return () => {
-      window.clearInterval(interval)
-      document.removeEventListener('visibilitychange', quickSync)
-    }
+    syncActivity()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletMocked])
 
@@ -427,27 +368,15 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
           <ReceiptText size={16} className="text-arc" />
           {filteredActivities.length} of {activities.length} wallet transactions
         </p>
-        <button type="button" onClick={() => { catchUpRuns.current = 0; syncActivity({ deep: true }) }} disabled={status === 'syncing'} className="quid-secondary-action h-9 px-3 text-xs">
+        <button type="button" onClick={syncActivity} disabled={status === 'syncing'} className="quid-secondary-action h-9 px-3 text-xs">
           {status === 'syncing' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
           {status === 'syncing' ? 'Syncing' : 'Refresh'}
         </button>
       </div>
 
-      {lastChecked ? (
-        <p className="mt-2 text-xs font-semibold text-ink/40">
-          Last checked {formatDate(lastChecked)}
-        </p>
-      ) : null}
-
       {error ? (
         <p className="mt-4 rounded-xl border border-arc/20 bg-haze/70 px-3 py-2 text-sm font-semibold text-ink/65">
           {error}
-        </p>
-      ) : null}
-
-      {notice && !error ? (
-        <p role="status" className="mt-4 rounded-xl border border-coral/30 bg-coral/10 px-3 py-2 text-sm font-semibold text-ink/70">
-          {notice}
         </p>
       ) : null}
 
