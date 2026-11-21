@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useRouter } from 'next/navigation'
 import { ExternalLink, Loader2, ReceiptText, RefreshCw, WalletCards, X } from 'lucide-react'
 import { chainOptions } from '@/lib/chains'
 import { formatQuidTimestamp } from '@/lib/date-time'
@@ -155,20 +156,33 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
   const [receipt, setReceipt] = useState(null)
   const [mounted, setMounted] = useState(false)
   const didAutoLoad = useRef(false)
+  const isSyncing = useRef(false)
+  const newestTxHash = useRef(initialActivities[0]?.txHash ?? null)
+  const router = useRouter()
 
-  async function syncActivity() {
+  // quiet: background check that only looks at Arc and does not flash the Syncing state.
+  async function syncActivity({ quiet = false } = {}) {
     if (walletMocked) {
       setStatus('mocked')
       return
     }
 
-    setStatus('syncing')
-    setError('')
+    if (isSyncing.current) {
+      return
+    }
+
+    isSyncing.current = true
+
+    if (!quiet) {
+      setStatus('syncing')
+      setError('')
+    }
 
     try {
       const response = await fetch('/api/arc-activity', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quick: quiet })
       })
       const payload = await response.json().catch(() => ({}))
 
@@ -176,12 +190,27 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
         throw new Error(payload.error ?? 'Wallet activity request failed.')
       }
 
-      setActivities((payload.activities ?? []).filter((activity) => !isBalanceSync(activity)))
+      const nextActivities = (payload.activities ?? []).filter((activity) => !isBalanceSync(activity))
+
+      setActivities(nextActivities)
       setKnownAddressAliases((current) => ({ ...current, ...(payload.addressAliases ?? {}) }))
       setStatus('ready')
+
+      // A new newest transaction also changes the cards the page itself renders.
+      const nextNewest = nextActivities[0]?.txHash ?? null
+
+      if (nextNewest && newestTxHash.current && nextNewest !== newestTxHash.current) {
+        router.refresh()
+      }
+
+      newestTxHash.current = nextNewest ?? newestTxHash.current
     } catch (err) {
-      setError((activities.length || initialActivities.length) ? '' : friendlyActivityError(err.message))
-      setStatus('error')
+      if (!quiet) {
+        setError((activities.length || initialActivities.length) ? '' : friendlyActivityError(err.message))
+        setStatus('error')
+      }
+    } finally {
+      isSyncing.current = false
     }
   }
 
@@ -202,6 +231,26 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
 
     didAutoLoad.current = true
     syncActivity()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walletMocked])
+
+  // Quiet Arc-only check every 60 seconds while the tab is visible, and on return to it.
+  useEffect(() => {
+    if (walletMocked) return undefined
+
+    function quickSync() {
+      if (document.visibilityState === 'visible') {
+        syncActivity({ quiet: true })
+      }
+    }
+
+    const interval = window.setInterval(quickSync, 60000)
+    document.addEventListener('visibilitychange', quickSync)
+
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', quickSync)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletMocked])
 
@@ -368,7 +417,7 @@ export function DashboardWalletActivity({ initialActivities = [], addressAliases
           <ReceiptText size={16} className="text-arc" />
           {filteredActivities.length} of {activities.length} wallet transactions
         </p>
-        <button type="button" onClick={syncActivity} disabled={status === 'syncing'} className="quid-secondary-action h-9 px-3 text-xs">
+        <button type="button" onClick={() => syncActivity()} disabled={status === 'syncing'} className="quid-secondary-action h-9 px-3 text-xs">
           {status === 'syncing' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
           {status === 'syncing' ? 'Syncing' : 'Refresh'}
         </button>

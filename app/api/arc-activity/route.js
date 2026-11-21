@@ -171,8 +171,11 @@ function isSyntheticBalanceRecord(activity) {
   return source.includes('balance sync') || source.includes('source not identified') || txHash.startsWith('balance-sync-')
 }
 
-export async function POST() {
+export async function POST(request) {
   try {
+    const body = await request.json().catch(() => ({}))
+    // Background checks only look at the Arc wallet, so other chains' RPCs are not hit every minute.
+    const quick = body?.quick === true
     const supabase = createSupabaseServerClient()
     const { data } = await supabase.auth.getUser()
     const user = data.user
@@ -208,7 +211,7 @@ export async function POST() {
     const warnings = []
     const records = []
 
-    for (const wallet of wallets) {
+    for (const wallet of quick ? wallets.filter((item) => item.chainId === ARC_TESTNET_ID) : wallets) {
       const option = chainOptions.find((item) => item.id === wallet.chainId)
 
       if (!option?.usdcAddress || !wallet.walletAddress) {

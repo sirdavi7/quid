@@ -14,13 +14,28 @@ function feeItemsForDisplay(quote) {
     : []
 }
 
+// At least two and at most six decimals; tiny values read "<0.000001".
+function displayAmount(value) {
+  const number = Number(String(value ?? '').replace(/,/g, ''))
+
+  if (!Number.isFinite(number)) {
+    return String(value ?? '')
+  }
+
+  if (number > 0 && number < 0.000001) {
+    return '<0.000001'
+  }
+
+  return number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })
+}
+
 function FeeValue({ amount, asset }) {
   const isUsdc = String(asset ?? '').toUpperCase() === 'USDC'
 
   return (
     <span className="flex shrink-0 items-center gap-1.5 text-right font-black text-ink">
       {isUsdc ? <UsdcMark className="h-4 w-4" /> : null}
-      {amount} {asset}
+      {displayAmount(amount)} {asset}
     </span>
   )
 }
@@ -116,6 +131,13 @@ export function NetworkFeeSummary({ quote, amount, amountLabel, feeTotalLabel = 
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-ink/10 pt-3">
           <span className="text-sm font-semibold text-ink/65">{amountLabel}</span>
           <FeeValue amount={amount} asset="USDC" />
+        </div>
+      ) : null}
+
+      {quote?.feeMode === 'gateway' && Number.isFinite(Number(quote.requiredGatewayUsdc)) && Number(quote.requiredGatewayUsdc) > 0 ? (
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-ink/10 pt-3">
+          <span className="text-sm font-black text-ink">Total from your Gateway balance</span>
+          <FeeValue amount={quote.requiredGatewayUsdc} asset="USDC" />
         </div>
       ) : null}
 

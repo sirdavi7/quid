@@ -4,7 +4,7 @@ import { createViemAdapterFromProvider } from '@circle-fin/adapter-viem-v2'
 import { UnifiedBalanceKit } from '@circle-fin/unified-balance-kit'
 import { AlertCircle, Loader2, Send } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatUnits, isAddress, parseUnits } from 'viem'
 import {
   useAccount,
@@ -131,6 +131,21 @@ function gatewayUsdcRequired(amount, fees) {
   return Number(amount) + routeFee
 }
 
+// Display helpers: strings from the quote may contain thousands separators.
+function parseDisplayNumber(value) {
+  return Number(String(value ?? '').replace(/,/g, ''))
+}
+
+function formatBalanceTwoDecimals(value) {
+  const amount = parseDisplayNumber(value)
+
+  if (!Number.isFinite(amount)) {
+    return String(value ?? '0.00')
+  }
+
+  return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 function gatewayBalanceAmounts(balances) {
   const confirmed = Number(balances?.totalConfirmedBalance ?? 0)
   const pending = Number(balances?.totalPendingBalance ?? 0)
@@ -163,6 +178,14 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
   })
   const [transaction, setTransaction] = useState(null)
   const [feePreview, setFeePreview] = useState({ state: 'idle' })
+  // Display-only Gateway balance kept current between quotes.
+  const [liveGateway, setLiveGateway] = useState(null)
+  const wasBusy = useRef(false)
+  // Bumped when an attempt finishes so the fee and route box is re-quoted.
+  const [quoteRefresh, setQuoteRefresh] = useState(0)
+  const quoteWasBusy = useRef(false)
+  // Set when a Gateway deposit is still confirming after the short in-page wait.
+  const [gatewayNotice, setGatewayNotice] = useState('')
   const [error, setError] = useState('')
   const [pendingAction, setPendingAction] = useState('')
   const [checkoutProgress, setCheckoutProgress] = useState('')
@@ -172,6 +195,16 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     [payForm.sourceChainId]
   )
   const isArcSource = selectedSource.id === ARC_TESTNET_ID
+  const gatewayView = liveGateway ?? feePreview
+  // A deposit is in flight and the confirmed Gateway balance does not yet cover
+  // this payment, so the payment cannot be sent.
+  const gatewayConfirming = Boolean(
+    !isArcSource &&
+      feePreview.state === 'ready' &&
+      feePreview.feeMode === 'gateway' &&
+      parseDisplayNumber(gatewayView.pendingGatewayUsdc) > 0 &&
+      parseDisplayNumber(gatewayView.confirmedGatewayUsdc) < Number(feePreview.requiredGatewayUsdc)
+  )
 
   useEffect(() => {
     const nextAmount = getQueryAmount(queryAmount)
@@ -223,6 +256,14 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
   )
 
   useEffect(() => {
+    if (quoteWasBusy.current && !isBusy) {
+      setQuoteRefresh((count) => count + 1)
+    }
+
+    quoteWasBusy.current = isBusy
+  }, [isBusy])
+
+  useEffect(() => {
     let cancelled = false
     const amount = Number(payForm.amount)
 
@@ -271,7 +312,64 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [address, chainId, connector, isArcSource, isConnected, page.walletAddress, payForm.amount, selectedSource])
+  }, [address, chainId, connector, isArcSource, isConnected, page.walletAddress, payForm.amount, quoteRefresh, selectedSource])
+
+  // A freshly loaded quote already carries a current Gateway balance.
+  useEffect(() => {
+    setLiveGateway(null)
+  }, [feePreview])
+
+  // Keep the displayed Gateway balance current: every 25 seconds while the tab is
+  // visible, and once right after a deposit or payment finishes. This only updates
+  // the balance lines; quotes, signatures and payments are untouched.
+  useEffect(() => {
+    const justFinished = wasBusy.current && !isBusy
+    wasBusy.current = isBusy
+
+    const eligible = isConnected && !isArcSource && chainId === selectedSource.id && feePreview.state === 'ready'
+
+    if (!eligible) {
+      return undefined
+    }
+
+    let cancelled = false
+
+    async function refreshGatewayBalance() {
+      if (cancelled || isBusy || document.visibilityState !== 'visible') {
+        return
+      }
+
+      try {
+        const adapter = await getCurrentAdapter()
+        const balances = await kit.getBalances({
+          sources: { adapter, chains: selectedSource.gatewayName },
+          includePending: true
+        })
+        const { confirmed, pending } = gatewayBalanceAmounts(balances)
+
+        if (!cancelled) {
+          setLiveGateway({
+            confirmedGatewayUsdc: formatUsdcAmount(confirmed),
+            pendingGatewayUsdc: formatUsdcAmount(pending)
+          })
+        }
+      } catch {
+        // Keep showing the last known balance; the next tick tries again.
+      }
+    }
+
+    if (justFinished) {
+      refreshGatewayBalance()
+    }
+
+    const interval = window.setInterval(refreshGatewayBalance, 25000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chainId, connector, feePreview.state, isArcSource, isBusy, isConnected, selectedSource])
 
   async function getAdapter(requiredChainId) {
     if (!connector) {
@@ -405,7 +503,7 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       const { confirmed } = gatewayBalanceAmounts(balances)
 
       if (confirmed >= requiredGatewayUsdc) {
-        return
+        return true
       }
 
       if (attempt < maximumAttempts - 1) {
@@ -413,7 +511,9 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       }
     }
 
-    throw new Error('Gateway is still confirming the deposit. Keep this page open and try the payment again shortly.')
+    // Some chains take many minutes to finalize; the page keeps showing the
+    // confirming state and the payment can be completed once it is credited.
+    return false
   }
 
   function paymentConfirmationMessage(quote, amount, recipientLabel) {
@@ -517,7 +617,9 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
     setError('')
     setPendingAction('pay')
     setCheckoutProgress('')
+    setGatewayNotice('')
     let gatewayDepositSubmitted = false
+    let gatewayCredited = false
 
     try {
       if (!isConnected) {
@@ -582,7 +684,14 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
 
         if (quote.gatewayDepositAmount || quote.gatewayBalancePending) {
           setCheckoutProgress('Waiting for Gateway to confirm the available USDC...')
-          await waitForGatewayBalance(adapter, selected, quote.requiredGatewayUsdc)
+          const credited = await waitForGatewayBalance(adapter, selected, quote.requiredGatewayUsdc)
+
+          if (!credited) {
+            setGatewayNotice(selected.label)
+            return
+          }
+
+          gatewayCredited = true
         }
 
         setCheckoutProgress('Confirm the Gateway payment in your wallet.')
@@ -605,7 +714,9 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
       setTransaction(payment)
     } catch (payError) {
       setError(gatewayDepositSubmitted
-        ? 'Your Gateway deposit was submitted, but Quid could not finish the payment. The USDC remains in your Gateway balance while it confirms. Keep this page open, then retry the checkout. Quid checks that balance before depositing again.'
+        ? (gatewayCredited
+          ? 'Your USDC is deposited and confirmed in Gateway, but the payment could not be completed. Your funds are safe in your Gateway balance. Tap the button to try again. Quid will not deposit again.'
+          : 'Your Gateway deposit was submitted, but Quid could not finish the payment. The USDC remains in your Gateway balance while it confirms. Keep this page open, then retry the checkout. Quid checks that balance before depositing again.')
         : getFriendlyError(payError.message))
     } finally {
       setPendingAction('')
@@ -689,8 +800,8 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
             ) : null}
             {!isArcSource && feePreview.state === 'ready' ? (
               <p className="mt-1 text-xs font-semibold text-ink/45">
-                Your Gateway balance: {feePreview.confirmedGatewayUsdc} USDC
-                {Number(feePreview.pendingGatewayUsdc) > 0 ? ` (${feePreview.pendingGatewayUsdc} USDC confirming)` : ''}
+                Your Gateway balance: {formatBalanceTwoDecimals((liveGateway ?? feePreview).confirmedGatewayUsdc)} USDC
+                {parseDisplayNumber((liveGateway ?? feePreview).pendingGatewayUsdc) > 0 ? ` (${formatBalanceTwoDecimals((liveGateway ?? feePreview).pendingGatewayUsdc)} USDC confirming)` : ''}
               </p>
             ) : null}
           </div>
@@ -764,12 +875,21 @@ export function PayActions({ page, isOwner = false, initialAmount, initialChain 
         )}
 
         <button
-          disabled={isBusy}
+          disabled={isBusy || gatewayConfirming}
           className="quid-primary-action mt-4 h-11 w-full px-4 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
-          {pendingAction === 'pay' ? <Loader2 size={17} className="animate-spin" /> : null}
-          {isOwner ? 'Run test payment' : `Pay ${page.name}`}
+          {pendingAction === 'pay' || gatewayConfirming ? <Loader2 size={17} className="animate-spin" /> : null}
+          {gatewayConfirming
+            ? 'Deposit confirming...'
+            : gatewayNotice
+              ? 'Complete payment'
+              : isOwner ? 'Run test payment' : `Pay ${page.name}`}
         </button>
+        {gatewayConfirming || gatewayNotice ? (
+          <p role="status" className="mt-3 rounded-xl border border-arc/20 bg-haze/70 px-3 py-2 text-sm font-semibold leading-6 text-ink/70">
+            Gateway is still confirming your deposit from {gatewayNotice || selectedSource.label}. This can take about 13 to 19 minutes on chains like Ethereum, Base and Arbitrum. You can leave this page and come back. Your USDC stays safe in Gateway, and you can complete the payment once it is confirmed.
+          </p>
+        ) : null}
         {checkoutProgress ? (
           <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink/60">
             <Loader2 size={16} className="animate-spin" /> {checkoutProgress}

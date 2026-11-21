@@ -34,14 +34,17 @@ export function DashboardReceivedBalance({ walletAddress, walletMocked = false }
   const [status, setStatus] = useState(walletAddress ? 'idle' : 'missing')
   const [error, setError] = useState('')
 
-  async function loadBalance() {
+  // silent: background refresh that keeps the last balance on screen.
+  async function loadBalance({ silent = false } = {}) {
     if (!walletAddress || walletMocked) {
       setStatus(walletMocked ? 'mocked' : 'missing')
       return
     }
 
-    setStatus('loading')
-    setError('')
+    if (!silent) {
+      setStatus('loading')
+      setError('')
+    }
 
     try {
       const response = await fetch('/api/arc-balance', {
@@ -56,15 +59,38 @@ export function DashboardReceivedBalance({ walletAddress, walletMocked = false }
       }
 
       setBalance(payload.balance)
+      setError('')
       setStatus('ready')
     } catch (err) {
-      setError(friendlyBalanceError(err.message))
-      setStatus('error')
+      if (!silent) {
+        setError(friendlyBalanceError(err.message))
+        setStatus('error')
+      }
     }
   }
 
   useEffect(() => {
     loadBalance()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walletAddress, walletMocked])
+
+  // Quiet refresh every 30 seconds while the tab is visible, and on return to it.
+  useEffect(() => {
+    if (!walletAddress || walletMocked) return undefined
+
+    function quickRefresh() {
+      if (document.visibilityState === 'visible') {
+        loadBalance({ silent: true })
+      }
+    }
+
+    const interval = window.setInterval(quickRefresh, 30000)
+    document.addEventListener('visibilitychange', quickRefresh)
+
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', quickRefresh)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletAddress, walletMocked])
 
@@ -82,7 +108,7 @@ export function DashboardReceivedBalance({ walletAddress, walletMocked = false }
       </p>
       <button
         type="button"
-        onClick={loadBalance}
+        onClick={() => loadBalance()}
         disabled={status === 'loading' || !walletAddress || walletMocked}
         className="quid-secondary-action mt-4 h-9 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-50"
       >
